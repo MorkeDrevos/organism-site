@@ -1,194 +1,98 @@
 (() => {
-  // ===== Config =====
-  const cfg = window.__CONFIG__ || {};
-  const API = cfg.apiBase || "https://organism-backend.onrender.com";
-  const TOKEN_SWAP_URL = cfg.swapUrl || "#";
+  // CONFIG
+  const API = "https://organism-backend.onrender.com"; // ← change if your backend URL differs
+  const DECAY_PER_TICK = 0.01;    // ~1% per tick (visual)
+  const TICK_MS = 10_000;         // decay tick
+  const HEALTH_POLL_MS = 6_000;   // /health
+  const TRADES_POLL_MS = 6_000;   // /trades
+  const FLOW_WINDOW = 5 * 60 * 1000; // 5m window for net flow
 
-  // ===== DOM =====
-  const canvas = document.getElementById('org-canvas');
-  const ctx = canvas.getContext('2d');
+  // DOM
+  const canvas = document.getElementById("org-canvas");
+  const ctx = canvas.getContext("2d");
+  const feedBtn = document.getElementById("feedBtn");
+  const sfxBtn = document.getElementById("sfxBtn");
+  const tradeBtn = document.getElementById("tradeBtn");
+  const stageBadge = document.getElementById("stageBadge");
 
-  const stageBadge = document.getElementById('stageBadge');
-  const statusWord = document.getElementById('status');
-  const heartbeat  = document.getElementById('heartbeat');
+  const statusWord = document.getElementById("status");
+  const heartbeat = document.getElementById("heartbeat");
+  const healthBar = document.getElementById("health-bar");
+  const mutBar = document.getElementById("mutBar");
+  const healthPct = document.getElementById("healthPct");
+  const mutPct = document.getElementById("mutPct");
+  const stageNum = document.getElementById("stageNum");
+  const decayRate = document.getElementById("decayRate");
 
-  const feedBtn  = document.getElementById('feedBtn');
-  const tradeBtn = document.getElementById('tradeBtn');
-  const sfxBtn   = document.getElementById('sfxBtn');
+  const priceLabel = document.getElementById("priceLabel");
+  const updatedLabel = document.getElementById("updatedLabel");
+  const flowBar = document.getElementById("flowBar");
+  const flowLabel = document.getElementById("flowLabel");
 
-  const priceLabel   = document.getElementById('priceLabel');
-  const updatedLabel = document.getElementById('updatedLabel');
+  const tradesBody = document.getElementById("trades-body");
 
-  const flowFill  = document.getElementById('flowFill');
-  const flowLabel = document.getElementById('flowLabel');
-
-  const healthFill = document.getElementById('healthFill');
-  const mutFill    = document.getElementById('mutFill');
-  const stageNum   = document.getElementById('stageNum');
-
-  const sparksEl   = document.getElementById('sparks');
-  const tradesBody = document.getElementById('trades-body');
-
-  tradeBtn.href = TOKEN_SWAP_URL;
-
-  // ===== Formatters =====
-  const fmtUSD   = (n) => `$${Number(n).toLocaleString(undefined,{minimumFractionDigits:4,maximumFractionDigits:6})}`;
-  const fmtUSDc  = (n) => `$${Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const fmtTs    = (ts) => new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-
-  // ===== Organism render =====
-  let t0 = performance.now();
-  let health = 0.35, mutation = 0.06;
-
-  function setHealth(v){
-    health = Math.max(0, Math.min(1, v));
-    healthFill.style.width = (health*100)+'%';
-  }
-  function setMutation(v){
-    mutation = Math.max(0, Math.min(1, v));
-    mutFill.style.width = (mutation*100)+'%';
-  }
-  function setFlow(x){
-    const pct = (x+1)/2;
-    flowFill.style.transform = `scaleX(${pct})`;
-    flowFill.style.transformOrigin = 'left';
-    flowLabel.textContent = x > .05 ? 'Feeding' : x < -.05 ? 'Starving' : 'Neutral';
-  }
-
-  function draw(now){
-    const t = (now - t0)/1000;
-    const w = canvas.width, h = canvas.height;
-    ctx.clearRect(0,0,w,h);
-
-    const womb = ctx.createRadialGradient(w/2,h/2, 60, w/2,h/2, w*0.5);
-    womb.addColorStop(0, `rgba(54,251,209, ${0.18+0.06*Math.sin(t*0.8)})`);
-    womb.addColorStop(0.55, `rgba(54,251,209, 0.03)`);
-    womb.addColorStop(1, `rgba(109,121,255, 0.00)`);
-    ctx.fillStyle = womb;
-    ctx.beginPath(); ctx.arc(w/2,h/2,w*0.49,0,Math.PI*2); ctx.fill();
-
-    const breath = 0.04 + 0.02*Math.sin(t*2.1);
-    const r = w*(0.10 + 0.18*health + breath);
-    const core = ctx.createRadialGradient(w/2,h/2, r*0.2, w/2,h/2, r);
-    core.addColorStop(0, `rgba(200,255,238,0.9)`);
-    core.addColorStop(1, `rgba(54,251,209,0.0)`);
-    ctx.fillStyle = core;
-    ctx.beginPath(); ctx.arc(w/2,h/2, r, 0, Math.PI*2); ctx.fill();
-
-    requestAnimationFrame(draw);
-  }
-  requestAnimationFrame(draw);
-
-  for(let i=0;i<28;i++){
-    const li = document.createElement('li');
-    li.style.left = (8 + Math.random()*84)+'%';
-    li.style.top  = (8 + Math.random()*84)+'%';
-    li.style.opacity = .08 + Math.random()*.12;
-    li.style.width = li.style.height = (2+Math.random()*3)+'px';
-    sparksEl.appendChild(li);
-  }
-
-  // ===== Polling =====
+  // STATE
   let sfx = false;
-  let recent = [];
-  const WINDOW_MS = 5*60*1000;
+  let health = 0.62;     // 0..1
+  let mutation = 0.08;   // 0..1
+  let stage = 1;
 
-  const fmtPriceHealth = (p) => Math.max(.05, Math.min(1, p*10));
+  let lastPrice = 0;     // usd
+  let lastTs = 0;
 
-  async function pollHealth(){
-    try{
-      const res = await fetch(`${API}/health`);
-      const j = await res.json();
+  let flows = [];        // {ts, dir:+1|-1, usd}
 
-      priceLabel.textContent = fmtUSD(j.price || 0);
-      updatedLabel.textContent = fmtTs(j.timestamp || Date.now());
+  // ---------- Helpers
+  const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
+  const setHealth = (v) => {
+    health = clamp(v);
+    healthBar.style.width = `${Math.round(health*100)}%`;
+    healthPct.textContent = `${Math.round(health*100)}%`;
+  };
+  const setMutation = (v) => {
+    mutation = clamp(v);
+    mutBar.style.width = `${Math.round(mutation*100)}%`;
+    mutPct.textContent = `${Math.round(mutation*100)}%`;
+  };
+  const setStage = (n) => {
+    stage = n;
+    stageNum.textContent = String(n);
+    stageBadge.textContent = n === 1 ? "Stage 1 · The Cell" : `Stage ${n}`;
+  };
+  const fmtUSD = (n) => n ? `$${n.toFixed(4)}` : "$—";
+  const fmtUSDc = (n) => n ? `$${n.toFixed(2)}` : "$—";
+  const pad2 = (x) => String(x).padStart(2,"0");
+  const fmtTs = (ts) => {
+    const d = new Date(ts);
+    return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+  };
 
-      const target = fmtPriceHealth(j.price || 0);
-      setHealth( health + (target - health)*0.08 );
+  // ---------- Canvas organism (mysterious “womb” glow)
+  const W = canvas.width, H = canvas.height, Cx=W/2, Cy=H/2;
+  let t0 = performance.now();
+  function drawOrganism(now){
+    const t = (now - t0)/1000;
 
-      statusWord.textContent = 'Alive';
-      statusWord.classList.add('ok');
-    }catch(e){
-      console.error('health error', e);
-      statusWord.textContent = 'Offline';
-      statusWord.classList.remove('ok');
+    ctx.clearRect(0,0,W,H);
+
+    // Pulsing nucleus
+    const baseR = 58 + 26*Math.sin(t*1.2);
+    const hue = 150 + 30*(health-0.5); // greener on health
+    const gradN = ctx.createRadialGradient(Cx, Cy, 0, Cx, Cy, baseR);
+    gradN.addColorStop(0, `hsla(${hue},70%,70%,.85)`);
+    gradN.addColorStop(1, `hsla(${hue},70%,35%,0)`);
+    ctx.fillStyle = gradN;
+    ctx.beginPath(); ctx.arc(Cx, Cy, baseR, 0, Math.PI*2); ctx.fill();
+
+    // Concentric rings drifting (womb feel)
+    for(let i=1;i<=5;i++){
+      const r = 110 + i*40 + 8*Math.sin(t*0.9 + i);
+      ctx.strokeStyle = `rgba(140, 200, 170, ${0.08 - i*0.008})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(Cx, Cy, r, 0, Math.PI*2); ctx.stroke();
     }
-  }
 
-  async function pollTrades(){
-    try{
-      const res = await fetch(`${API}/trades`);
-      const raw = await res.text();
-
-      let data;
-      try { data = JSON.parse(raw); }
-      catch {
-        const fixed = raw
-          .replace(/^ok[^[]*\[/,'[')
-          .replace(/,\s*]$/ ,']')
-          .replace(/\]}\s*$/,'}]');
-        data = JSON.parse(fixed);
-      }
-
-      const list = Array.isArray(data) ? data : (data.trades || []);
-      tradesBody.innerHTML = '';
-      const now = Date.now();
-
-      for(const r of list){
-        const sideRaw = String(r.side || r.action || '').toUpperCase();
-        const side = sideRaw.includes('BUY') ? 'BUY' : 'SELL';
-        const price = Number(r.price || 0);
-        const amount = Number(r.amount || r.size || 0);
-        const ts = r.ts || r.time || now;
-        const value = price * amount;
-
-        recent.push({ ts, side, price, amount });
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="right mono">${fmtTs(ts)}</td>
-          <td>${ side==='BUY' ? '<span class="feed">Feed</span>' : '<span class="starve">Starve</span>' }</td>
-          <td class="right mono">${fmtUSDc(value)}</td>
-          <td class="right mono">${fmtUSD(price)}</td>
-        `;
-        tradesBody.appendChild(tr);
-      }
-
-      // prune & net flow
-      for(let i=recent.length-1;i>=0;i--) if(now - recent[i].ts > WINDOW_MS) recent.splice(i,1);
-      let sum=0, denom=0;
-      for(const r of recent){
-        const v = (r.price||0)*(r.amount||0);
-        denom += v;
-        sum   += (r.side==='BUY' ? v : -v);
-      }
-      const net = denom ? Math.max(-1, Math.min(1, sum/denom)) : 0;
-      setFlow(net);
-
-      const delta = 0.22 * net;
-      setHealth(health + delta);
-      setMutation(Math.min(1, mutation + Math.max(0,delta)*0.3));
-
-    }catch(e){
-      console.error('trades error', e);
-    }
-  }
-
-  // ===== Interactions & schedules =====
-  sfxBtn.addEventListener('click', () => {
-    sfx = !sfx;
-    sfxBtn.textContent = sfx ? '🔊 SFX On' : '🔇 SFX Off';
-  });
-  feedBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    setHealth(health + 0.06);
-    setMutation(Math.min(1, mutation + 0.03));
-  });
-
-  setInterval(()=> setHealth(health - 0.01), 10_000);
-  setInterval(pollHealth, 6_000);
-  setInterval(pollTrades, 6_000);
-
-  pollHealth();
-  pollTrades();
-})();
+    // drifting specks
+    for(let i=0;i<18;i++){
+      const a = t*0.3 + i*0.7, r = 190 + (i%5)*22 + 8*Math.sin(t*.8+i);
+      const x =
