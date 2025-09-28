@@ -147,7 +147,7 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="right mono">${fmtTs(ts)}</td>
-          <td>${ side==='BUY' ? '<span class="feed">feed</span>' : '<span class="starve">starve</span>' }</td>
+          <td>${ side==='BUY' ? '<span class="feed">Feed</span>' : '<span class="starve">Starve</span>' }</td>
           <td class="right mono">${fmtUSDc(value)}</td>
           <td class="right mono">${fmtUSD(price)}</td>
         `;
