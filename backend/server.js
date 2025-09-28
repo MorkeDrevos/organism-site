@@ -7,10 +7,10 @@ app.use(cors());
 
 const PORT = process.env.PORT || 10000;
 
-// Test token (replace with yours or use query param later)
+// Default test token (NYX in this case)
 const TOKEN_MINT = "7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV";
 
-// Health endpoint → pulls live price from Jupiter v3
+// Health endpoint with Jupiter v3 price
 app.get("/health", async (_req, res) => {
   try {
     const url = `https://lite-api.jup.ag/price/v3?ids=${TOKEN_MINT}`;
@@ -27,7 +27,7 @@ app.get("/health", async (_req, res) => {
       timestamp: Date.now()
     });
   } catch (err) {
-    console.error("Jupiter fetch error:", err);
+    console.error("Jupiter fetch error:", err.message);
     res.status(200).json({
       status: "alive",
       price: 0,
