@@ -1,177 +1,164 @@
 /* ===== Base ===== */
-*{ box-sizing:border-box }
-html,body{ margin:0; height:100%; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif; }
-
-/* ===== Theme: Deep black + aqua/magenta glow ===== */
-body.theme-void{
-  --bg:#050607;           /* deep black */
-  --ink:#EAF2FF;          /* primary text */
-  --muted:#8FA1BB;        /* secondary */
-  --ok:#67FCA4;           /* Feed text */
-  --warn:#FF6F86;         /* Starve text */
-
-  --edge:#16202C;         /* hairline */
-  --glass:#070A0Fcc;      /* translucent cards */
-  --chip:#0B1219;         /* chips/micro blocks */
-
-  --aquaA:#5FF3D1;        /* Health ring A */
-  --aquaB:#BDF8EC;        /* Health ring B */
-  --magA:#FF69C9;         /* Mutation ring A */
-  --magB:#FFC2E9;         /* Mutation ring B */
-
-  --track:#0C131A;        /* meter track */
-  --flowGradA:#5FF3D1;    /* flow left */
-  --flowGradB:#FF69C9;    /* flow right */
-
-  --shadow:0 16px 46px rgba(0,0,0,.42);
+:root{
+  --bg:#05070a;
+  --pane:#0c1118;
+  --edge:#1d2632;
+  --ink:#dfe7ff;
+  --muted:#8da3ba;
+  --ok:#69e4d1;     /* aqua */
+  --okA: rgba(105,228,209,.9);
+  --warn:#ff77aa;   /* magenta/pink */
+  --warnA: rgba(255,119,170,.9);
+  --acc:#7cc0ff;    /* accent for bars */
 }
-body.theme-void{ background:var(--bg); color:var(--ink); }
-#org-canvas{ position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
 
-/* ===== Top bar ===== */
-.top{
-  position:fixed; inset:12px 12px auto 12px; z-index:2;
-  display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px;
+html,body{
+  margin:0;
+  padding:0;
+  height:100%;
+  background:var(--bg);
+  color:var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  overflow:hidden;
 }
-.brand{ letter-spacing:.3px }
-.chips{ display:flex; gap:8px; flex-wrap:wrap }
-.chip{
-  background:var(--chip); border:1px solid var(--edge); color:#CFE0FF;
-  padding:4px 10px; border-radius:999px; font-size:12px;
-}
-.ok{ color:var(--ok) }
 
-.rightside{ display:flex; gap:10px; align-items:center; flex-wrap:wrap }
-.micro{
-  display:grid; grid-template-columns:auto auto; gap:6px;
-  padding:6px 10px; border-radius:10px; font-size:12px;
-  background:var(--glass); border:1px solid var(--edge); backdrop-filter: blur(10px);
+/* fullscreen canvas behind everything */
+#org-canvas{
+  position:fixed; inset:0;
+  width:100vw; height:100vh;
+  z-index:0;
+  display:block;
+  background:transparent;
 }
-.micro span:first-child{ color:var(--muted) }
 
-.btn{
-  background:transparent; border:1px solid var(--edge); color:var(--ink);
-  border-radius:10px; padding:8px 12px; font-size:13px; cursor:pointer;
+/* ===== Topbar ===== */
+.topbar{
+  position:relative; z-index:2;
+  display:grid; grid-template-columns: 1fr auto;
+  align-items:center; gap:18px;
+  padding:12px 16px;
+  font-weight:600; color:#b4c4e7;
 }
-.btn:hover{ border-color:#304559 }
+.brand{ font-size:18px; color:#c7d7ff; }
+.chips{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{ background:#0f1a2f; color:#b6c4ff; border:1px solid #233056; border-radius:999px; padding:4px 9px; font-size:12px; }
 
-/* ===== Ring HUD ===== */
+.inline-metrics{ display:flex; align-items:center; gap:18px; justify-content:flex-end; }
+.kv label{ display:block; font-size:11px; color:var(--muted); }
+.kv span{ font-variant-numeric: tabular-nums; }
+
+.btn{ background:#111c2b; border:1px solid #223248; color:#cfe4ff; border-radius:6px; padding:6px 10px; cursor:pointer; }
+.btn.ghost{ background:transparent; }
+
+/* Net flow tiny meter in top HUD */
+.meter{ width:260px; }
+.flowline{ display:flex; align-items:center; gap:8px; }
+.flowline .flow{ flex:1; height:4px; background:#122030; border-radius:3px; overflow:hidden; }
+.flowline .flow span{ display:block; height:100%; width:0%; background:linear-gradient(90deg,#0cf,#7f7); transition:width .4s; }
+#flowLabel{ color:#9bb2cb; font-size:12px; }
+
+/* ===== Ring HUD (center area) ===== */
 .ring-hud{
-  position:fixed; inset:0; display:grid; place-items:center; z-index:2;
-  grid-template-columns: 240px 380px 240px; gap:28px; pointer-events:none;
+  position:fixed; inset:0; z-index:2; pointer-events:none;
+  display:grid; grid-template-columns:240px 380px 240px; gap:28px;
+  place-items:center;
 }
-.gauge{ display:grid; gap:8px; justify-items:center }
-.gauge .label{ font-size:13px; color:var(--muted) }
-.gauge .label span{ color:var(--ink) }
+.gauge{ display:grid; gap:8px; justify-items:center; }
+.gauge .label{ font-size:13px; color:var(--muted); }
+.gauge .label span{ color:var(--ink); }
 
-/* Rings (conic gradient with halo) */
+/* Thin glowing arc (not pie) */
 .gauge .ring{
-  --val:0; /* degrees 0..360 */
+  --val:0;             /* degrees 0..360 */
+  --ringColor:#69e4d1; /* default aqua */
   width:220px; height:220px; border-radius:50%;
   background:
-    conic-gradient(var(--ringA) calc(var(--val)*1deg), transparent 0),
-    radial-gradient(closest-side, var(--ringHole) 78%, transparent 79%);
-  box-shadow: inset 0 0 0 1px var(--edge), 0 0 30px rgba(140,200,255,.25);
+    radial-gradient(closest-side, #05070a 72%, transparent 78%),
+    conic-gradient(var(--ringColor) 0deg calc(var(--val)*1deg), transparent 0deg 360deg);
+  box-shadow:
+    inset 0 0 12px rgba(0,0,0,.85),
+    0 0 24px var(--ringColor),
+    0 0 65px var(--ringColor);
   position:relative;
+  mask-image: radial-gradient(circle, transparent 70%, black 80%);
+  -webkit-mask-image: radial-gradient(circle, transparent 70%, black 80%);
 }
-.gauge.health .ring{ --ringA: var(--aquaA); --ringHole:#020406; filter: drop-shadow(0 0 20px rgba(95,243,209,.2)); }
-.gauge.mut .ring{ --ringA: var(--magA);  --ringHole:#020406; filter: drop-shadow(0 0 18px rgba(255,105,201,.18)); }
+.gauge.health .ring{ --ringColor: var(--okA); }
+.gauge.mut .ring{ --ringColor: var(--warnA); }
 
-/* Nucleus card */
+/* Nucleus info card */
 .nucleus{
   width:100%; max-width:380px; pointer-events:auto;
-  background:var(--glass); border:1px solid var(--edge); border-radius:18px; padding:14px;
-  box-shadow:var(--shadow); backdrop-filter: blur(12px);
+  background: rgba(9,12,18,.78);
+  border:1px solid var(--edge);
+  border-radius:18px;
+  padding:14px;
+  box-shadow: 0 14px 42px rgba(0,0,0,.7);
+  backdrop-filter: blur(14px);
 }
-.nucleus .title{ font-size:14px; letter-spacing:.3px; opacity:.85; margin-bottom:8px }
-.mini-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px }
-.mini{
-  display:flex; justify-content:space-between; align-items:center;
-  background:#0A0F15; border:1px solid var(--edge); border-radius:10px; padding:8px 10px; font-size:12px;
-}
-.mini .k{ color:var(--muted) }
+.nucleus .title{ font-size:14px; font-weight:700; margin-bottom:8px; color:#e7f0ff; }
+.kvrow{ display:grid; grid-template-columns: 110px 1fr; align-items:center; gap:10px; margin-bottom:10px; }
+.kvrow .kv{ display:flex; gap:8px; }
+.kvrow .kv.full{ grid-column:1/-1; display:block; }
+.kvrow label{ font-size:12px; color:#95a8be; }
+.subtext{ font-size:11px; color:#8da3ba; margin-top:4px; }
 
-.flowline{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px }
-.flow{
-  position:relative; height:6px; border-radius:6px; overflow:hidden;
-  background:var(--track); border:1px solid var(--edge);
-}
-.flow>#flowBar{
-  position:absolute; inset:0; width:0%; transition: width .35s ease;
-  background:linear-gradient(90deg,var(--flowGradA),var(--flowGradB));
-}
-.flowline .t{ color:var(--muted); font-size:12px }
+/* small bar inside nucleus */
+.bar{ flex:1; height:6px; background:#1c2838; border-radius:3px; overflow:hidden; position:relative; }
+.bar > span{ display:block; height:100%; width:0%; background:linear-gradient(90deg,#6bf,#a8f); transition:width .3s ease; }
 
-/* ===== Toast stack (right) ===== */
-.stack{
-  position:fixed; right:12px; top:88px; z-index:2; width:420px;
-  display:flex; flex-direction:column; gap:10px;
+/* ===== Bottom dock ===== */
+.dock{
+  z-index:2; position:absolute; left:0; right:0; bottom:10px;
+  display:grid; grid-template-columns: 1fr 1.3fr; gap:16px;
+  padding:0 12px;
 }
-.stack > header{ display:flex; align-items:center; gap:8px; font-size:14px; padding:6px 2px; }
-.live-dot{ color:var(--ok); font-size:12px }
+.panel{
+  background: rgba(8,12,18,.84);
+  border:1px solid #213045;
+  border-radius:14px;
+  padding:10px 12px 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.55);
+}
+.panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.panel-head h3{ margin:0; font-size:14px; color:#dbe7ff; }
+.live-dot{ color:#0ff; margin-left:6px; font-size:12px; }
 
-.thead{
-  display:grid; grid-template-columns: 66px 70px 1fr 1fr; gap:10px;
-  color:var(--muted); font-size:12px; padding:4px 0 4px; border-bottom:1px solid var(--edge);
-}
-.toasts{ display:flex; flex-direction:column; gap:8px; max-height:72vh; overflow:auto; padding-right:4px }
-.toast{
-  display:grid; grid-template-columns: 66px 70px 1fr 1fr; gap:10px; align-items:center;
-  padding:10px 2px; font-size:13px; border-bottom:1px dashed #0f1b25;
-}
-.toast:last-child{ border-bottom:none }
-.right{ text-align:right }
-.type-feed{ color:var(--ok) }
-.type-starve{ color:var(--warn) }
+/* vitals rows */
+.vitals .kvrow{ grid-template-columns: 70px 1fr 40px; gap:10px; margin:8px 0; }
+.vitals .kvrow.small{ grid-template-columns: auto 1fr auto auto; color:#9db0c6; }
+.vitals .pct{ text-align:right; color:#a9c6ff; font-variant-numeric: tabular-nums; }
 
-/* ===== Footer ===== */
-.foot{ position:fixed; left:0; right:0; bottom:8px; text-align:center; opacity:.45; font-size:11px; z-index:2 }
+/* trades feed (rows, no heavy table) */
+.feedlist{ display:grid; gap:8px; }
+.feed-head{ display:grid; grid-template-columns: 90px 80px 1fr 1fr; gap:8px; color:#9eb2c9; font-size:12px; }
+#trades-body .row{
+  display:grid; grid-template-columns: 90px 80px 1fr 1fr; gap:8px;
+  background: rgba(18,24,34,.6); border:1px solid #223349;
+  padding:10px 12px; border-radius:10px;
+}
+#trades-body .row .t{ color:#9fb6d0; }
+#trades-body .row .p{ color:#b8d2ff; }
+#trades-body .row .type{ color:#8fb; }
+#trades-body .row .type.starve{ color:#ff8cae; }
+
+/* table fallback (unused now, kept for safety) */
+.table{ width:100%; border-collapse:collapse; font-size:13px; }
+.table th, .table td{ text-align:left; padding:6px; }
+.table thead{ background:#151a22; }
+
+/* footer tiny */
+.foot{
+  position:absolute; bottom:0; width:100%;
+  font-size:11px; opacity:.45; text-align:center; padding:4px; z-index:1;
+}
 
 /* ===== Responsive ===== */
-@media (max-width: 1160px){
-  .ring-hud{ grid-template-columns:1fr; gap:14px; padding:0 12px }
-  .gauge .ring{ width:200px; height:200px }
-  .stack{ width:360px }
+@media (max-width: 1200px){
+  .ring-hud{ grid-template-columns: 220px 1fr 220px; gap:18px; }
+  .nucleus{ max-width:340px; }
 }
-@media (max-width: 720px){
-  .top{ grid-template-columns:1fr; gap:8px }
-  .ring-hud{ gap:10px }
-  .gauge .ring{ width:180px; height:180px }
-  .stack{ right:10px; left:10px; width:auto; top:auto; bottom:86px; }
-  .thead, .toast{ grid-template-columns: 56px 64px 1fr 1fr; }
+@media (max-width: 980px){
+  .ring-hud{ display:none; }       /* hide big HUD on phones, keep dock */
+  .dock{ grid-template-columns: 1fr; gap:12px; padding: 0 10px 10px; }
 }
-
-/* ===== Ring HUD ===== */
-.ring-hud{
-  position:fixed; inset:0; display:grid; place-items:center; z-index:2;
-  grid-template-columns: 240px 380px 240px; gap:28px; pointer-events:none;
-}
-.gauge{ display:grid; gap:8px; justify-items:center }
-.gauge .label{ font-size:13px; color:var(--muted) }
-.gauge .label span{ color:var(--ink) }
-
-/* Rings with strong glow */
-.gauge .ring{
-  --val:0; /* degrees 0..360 */
-  width:220px; height:220px; border-radius:50%;
-  background:
-    conic-gradient(var(--ringColor) calc(var(--val)*1deg), rgba(0,0,0,0) 0),
-    radial-gradient(closest-side, #050607 75%, transparent 80%);
-  box-shadow: inset 0 0 8px #000,
-              0 0 25px var(--ringColor),
-              0 0 55px var(--ringColor);
-  position:relative;
-}
-.gauge.health .ring{ --ringColor: var(--aquaA); }
-.gauge.mut .ring{ --ringColor: var(--magA); }
-
-/* Nucleus card contrast */
-.nucleus{
-  width:100%; max-width:380px; pointer-events:auto;
-  background:rgba(10,14,22,0.85); border:1px solid var(--edge);
-  border-radius:18px; padding:14px;
-  box-shadow:0 12px 34px rgba(0,0,0,.7);
-  backdrop-filter: blur(14px);
-  color:var(--ink);
-}
-.nucleus .title{ font-size:14px; font-weight:600; margin-bottom:8px; }
