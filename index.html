@@ -6,7 +6,7 @@
   <title>THE ORGANISM — Specimen Viewer</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="theme-cool">
+<body class="theme-void">
   <!-- Creature chamber -->
   <canvas id="org-canvas" aria-hidden="true"></canvas>
 
@@ -30,7 +30,6 @@
       <button id="feedBtn" class="btn">⚡ Feed</button>
       <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
       <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
-      <button id="themeBtn" class="btn ghost">Theme: Warm</button>
     </div>
   </header>
 
@@ -63,8 +62,14 @@
   </section>
 
   <!-- Right toast stack -->
-  <aside class="stack card">
+  <aside class="stack">
     <header>Feeding / Starving <span class="live-dot">Live</span></header>
+    <div class="thead">
+      <div>Time</div>
+      <div>Type</div>
+      <div class="right">Value (USD)</div>
+      <div class="right">Price (USD)</div>
+    </div>
     <div id="trades-body" class="toasts"></div>
   </aside>
 
