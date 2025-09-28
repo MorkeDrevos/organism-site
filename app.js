@@ -1,437 +1,242 @@
 /* ===== CONFIG ===== */
-const API = "https://organism-backend.onrender.com"; // change if needed
-const POLL_HEALTH_MS = 6000;
-const POLL_TRADES_MS = 6000;
+const API = "https://organism-backend.onrender.com"; // your backend base
+const TOKEN_SWAP_URL = "#"; // set to your Jupiter swap link when ready
 
-/* ===== DOM ===== */
+/* ===== canvas (womb) ===== */
 const canvas = document.getElementById("org-canvas");
 const ctx = canvas.getContext("2d", { alpha: true });
+let W = 0, H = 0, t0 = performance.now();
 
-const statusWord = document.getElementById("status");
-const heartbeat  = document.getElementById("heartbeat");
-const feedBtn    = document.getElementById("feedBtn");
-const tradeBtn   = document.getElementById("tradeBtn");
-const sfxBtn     = document.getElementById("sfxBtn");
-
-const healthBar  = document.getElementById("healthBar");
-const mutBar     = document.getElementById("mutBar");
-const healthPct  = document.getElementById("healthPct");
-const mutPct     = document.getElementById("mutPct");
-const stageNum   = document.getElementById("stageNum");
-const stageBadge = document.getElementById("stageBadge");
-const decayRate  = document.getElementById("decayRate");
-const priceLabel = document.getElementById("priceLabel");
-const updatedLabel = document.getElementById("updatedLabel");
-const flowBar    = document.getElementById("flowBar");
-const flowLabel  = document.getElementById("flowLabel");
-const tradesBody = document.getElementById("trades-body");
-
-/* ===== State ===== */
-let health = 0.58;       // 0..1
-let mutation = 0.06;     // 0..1
-let stage = 1;
-let sfxEnabled = false;
-
-let lastPrice = 0;
-let lastTs = 0;
-let flows = [];
-const FLOW_WINDOW = 20;
-
-/* ===== Canvas sizing ===== */
-function resizeCanvas() {
-  const rect = canvas.getBoundingClientRect();
-  canvas.width  = Math.floor(rect.width  * devicePixelRatio);
-  canvas.height = Math.floor(rect.height * devicePixelRatio);
-  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+function resizeCanvas(){
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
 }
-addEventListener("resize", resizeCanvas);
+window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-/* ===== Helpers ===== */
-const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
-const rand = (a,b)=> a + Math.random()*(b-a);
-const lerp = (a,b,t)=> a+(b-a)*t;
-const fmtUSD = n => typeof n === "number" ? `$${n.toFixed(4)}` : "$—";
-const fmtUSDSmall  = n => typeof n === "number" ? `$${n.toFixed(2)}` : "$—";
-const fmtTime = ts => {
-  const d = new Date(ts);
-  const hh = String(d.getHours()).padStart(2,"0");
-  const mm = String(d.getMinutes()).padStart(2,"0");
-  const ss = String(d.getSeconds()).padStart(2,"0");
-  return `${hh}:${mm}:${ss}`;
-};
-function setHealth(v){ health = clamp(v,0,1); healthBar.style.width = `${Math.round(health*100)}%`; healthPct.textContent = `${Math.round(health*100)}%`; }
-function setMutation(v){ mutation = clamp(v,0,1); mutBar.style.width = `${Math.round(mutation*100)}%`; mutPct.textContent = `${Math.round(mutation*100)}%`; }
-function setStage(n){ stage = n; stageNum.textContent = String(n); stageBadge.textContent = n===1 ? "Stage 1 · The Cell" : `Stage ${n}`; }
-function setFlow(v){
-  const mid = 50 + Math.round(v*50);
-  flowBar.style.width = `${Math.max(6, Math.min(100, mid))}%`;
-  flowLabel.textContent = v>0.04 ? "Feeding" : v<-0.04 ? "Starving" : "Neutral";
-}
-
-/* ===== Creature render (womb-style) ===== */
-const bubbles = Array.from({length: 32}, (_,i)=>({
-  r: rand(1.2, 3.2) * (i%7===0?1.6:1),
-  a: rand(0, Math.PI*2),
-  d: rand(0.25, 0.95),   // radial fraction
-  s: rand(0.2, 0.55),    // speed
-  z: rand(0.1, 0.9)      // depth for parallax
-}));
-let t0 = performance.now();
-function drawOrganism() {
-  const now = performance.now();
+function drawOrganism(now){
   const t = (now - t0) / 1000;
-
-  const W = canvas.width  / devicePixelRatio;
-  const H = canvas.height / devicePixelRatio;
   ctx.clearRect(0,0,W,H);
 
-  // Chamber center (lower so it peeks from below panels)
-  const cx = W * 0.5;
-  const cy = H * 0.72;
-  const base = Math.min(W, H) * 0.38;
+  // center slightly above mid-screen
+  const cx = W*0.52;
+  const cy = H*0.38;
 
-  /* 1) Deep amniotic glow */
-  const ambient = ctx.createRadialGradient(cx, cy, base*0.05, cx, cy, base*1.4);
-  ambient.addColorStop(0, `rgba(155, 235, 210, ${0.22 + 0.05*Math.sin(t*1.0)})`);
-  ambient.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = ambient;
-  ctx.beginPath(); ctx.arc(cx, cy, base*1.45, 0, Math.PI*2); ctx.fill();
-
-  /* 2) Membrane */
-  ctx.save();
-  ctx.lineWidth = 14;
-  ctx.strokeStyle = `rgba(180,220,235,${0.08 + 0.02*Math.sin(t*1.3)})`;
-  ctx.shadowBlur = 20;
-  ctx.shadowColor = "rgba(150,200,255,0.08)";
-  ctx.beginPath(); ctx.arc(cx, cy, base*1.02 + 6*Math.sin(t*0.9), 0, Math.PI*2); ctx.stroke();
-  ctx.restore();
-
-  /* 3) Caustic bands */
-  ctx.save();
-  ctx.globalCompositeOperation = "soft-light";
-  for (let i=0;i<5;i++){
-    const r = base * (0.35 + i*0.12 + 0.02*Math.sin(t + i));
-    ctx.strokeStyle = `rgba(140,180,220,${0.06 - i*0.008})`;
-    ctx.lineWidth = 2 + Math.sin(i + t*0.25)*1.2;
-    ctx.beginPath(); ctx.arc(cx + 6*Math.sin(t*0.6+i), cy + 4*Math.cos(t*0.7+i), r, 0, Math.PI*2); ctx.stroke();
+  // soft “amniotic” backdrop
+  for(let r=0;r<6;r++){
+    ctx.beginPath();
+    const R = Math.min(W,H)* (0.18 + r*0.08);
+    ctx.arc(cx, cy, R + Math.sin(t*0.7+r)*2, 0, Math.PI*2);
+    ctx.strokeStyle = `rgba(42,61,79,${0.15 - r*0.02})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
   }
-  ctx.restore();
 
-  /* 4) Nucleus */
-  const hue = 165 + 25*Math.sin(t*0.9);
-  const nucR = base*(0.30 + 0.03*Math.sin(t*1.6) + 0.02*health);
-  const nucleus = ctx.createRadialGradient(cx, cy, nucR*0.1, cx, cy, nucR);
-  nucleus.addColorStop(0, `hsla(${hue}, 70%, ${60 + 8*Math.sin(t*2)}%, .95)`);
-  nucleus.addColorStop(1, `hsla(${hue}, 40%, 22%, 0.05)`);
-  ctx.fillStyle = nucleus;
-  ctx.beginPath(); ctx.arc(cx, cy, nucR, 0, Math.PI*2); ctx.fill();
+  // pulsing nucleus
+  const hue = 164; // teal-green
+  const base = 64 + 28*Math.sin(t*1.6);
+  const grad = ctx.createRadialGradient(cx,cy,0,cx,cy,base+80);
+  grad.addColorStop(0, `hsla(${hue},70%,65%,.95)`);
+  grad.addColorStop(0.45, `hsla(${hue},48%,42%,.65)`);
+  grad.addColorStop(1, `rgba(0,0,0,0)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(cx, cy, base+90, 0, Math.PI*2); ctx.fill();
 
-  /* 5) Umbilical pulse */
-  ctx.save();
-  const pulse = 4 + 2*Math.sin(t*2.4);
-  ctx.lineWidth = pulse;
-  const gradCord = ctx.createLinearGradient(W*0.22, H*0.15, cx, cy);
-  gradCord.addColorStop(0, "rgba(220,160,255,.05)");
-  gradCord.addColorStop(1, "rgba(140,220,200,.35)");
-  ctx.strokeStyle = gradCord;
-  ctx.shadowColor = "rgba(120,220,200,.25)";
-  ctx.shadowBlur = 12;
-  ctx.beginPath();
-  ctx.moveTo(W*0.22, H*0.15);
-  ctx.bezierCurveTo(W*0.32, H*0.22, W*0.42, H*0.35, cx - nucR*0.6, cy - nucR*0.6);
-  ctx.stroke();
-  ctx.restore();
+  // membrane glow
+  ctx.beginPath(); ctx.arc(cx, cy, base+54, 0, Math.PI*2);
+  ctx.strokeStyle = `hsla(${hue},60%,70%,.35)`; ctx.lineWidth = 8; ctx.stroke();
 
-  /* 6) Bubbles */
-  for (const b of bubbles){
-    const ang = b.a + t*(0.2 + b.s*0.3);
-    const rr  = base * lerp(0.2, 0.95, b.d);
-    const x   = cx + Math.cos(ang + b.z*2)*rr*0.85;
-    const y   = cy + Math.sin(ang + b.z*1.5)*rr*0.55 - t*8*b.s; // up drift
-    const yy  = ((y - (cy-base)) % (base*2.2)) + (cy-base);
-    ctx.fillStyle = `rgba(200,230,255, ${0.12 + 0.1*b.z})`;
-    ctx.beginPath(); ctx.arc(x, yy, b.r*(1+0.2*Math.sin(t+b.z*6)), 0, Math.PI*2); ctx.fill();
+  // drifting motes
+  for(let i=0;i<14;i++){
+    const a = t*0.12 + i*1.3;
+    const r = 90 + i*14 + 10*Math.sin(t*0.7+i);
+    const x = cx + Math.cos(a)*r;
+    const y = cy + Math.sin(a*1.2)*r*0.55;
+    ctx.beginPath(); ctx.arc(x, y, 2 + (i%3===0?1.6:0), 0, Math.PI*2);
+    ctx.fillStyle = "rgba(200,240,230,.25)"; ctx.fill();
   }
 
   requestAnimationFrame(drawOrganism);
 }
 requestAnimationFrame(drawOrganism);
 
-/* ===== Poll: /health ===== */
+/* ===== DOM refs ===== */
+const statusWord = document.getElementById("status");
+const heartbeat = document.getElementById("heartbeat");
+const priceLabel = document.getElementById("priceLabel");
+const updatedLabel = document.getElementById("updatedLabel");
+
+const healthBar = document.getElementById("health-bar");
+const mutBar = document.getElementById("mut-bar");
+const healthPct = document.getElementById("healthPct");
+const mutPct = document.getElementById("mutPct");
+const stageNum = document.getElementById("stageNum");
+const stageBadge = document.getElementById("stageBadge");
+const decayRate = document.getElementById("decayRate");
+
+const flowNeedle = document.getElementById("flowNeedle");
+const flowLabel = document.getElementById("flowLabel");
+
+const tradesBody = document.getElementById("trades-body");
+const feedBtn = document.getElementById("feedBtn");
+const sfxBtn = document.getElementById("sfxBtn");
+const tradeBtn = document.getElementById("tradeBtn");
+
+/* ===== utils ===== */
+const fmtUSD = n => `$${Number(n).toFixed(4)}`;
+const pad2 = n => String(n).padStart(2,"0");
+const fmtTime = ts => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`; };
+
+/* ===== state ===== */
+let health = 0.53, mutation = 0.06, net = 0;
+let lastPrice = 0, lastTs = 0;
+
+/* ===== data polling ===== */
+const POLL_HEALTH_MS = 6000;
+const POLL_TRADES_MS = 6000;
+const DECAY_MS = 10000;
+
+// /health
 async function pollHealth(){
   try{
-    const r = await fetch(`${API}/health`, { cache:"no-store" });
+    const r = await fetch(`${API}/health`);
     const j = await r.json();
-    const price = Number(j.price) || 0;
-    lastPrice = price;
-    lastTs = j.timestamp || Date.now();
-    priceLabel.textContent = fmtUSDSmall(price);
+    lastPrice = j.price ?? 0;
+    lastTs = j.timestamp ?? Date.now();
+    priceLabel.textContent = fmtUSD(lastPrice);
     updatedLabel.textContent = fmtTime(lastTs);
 
-    // gentle health target guided by price (playful mapping)
-    const target = 0.45 + Math.tanh(price*20)/10;
-    setHealth(health*0.9 + target*0.1);
-
-    // update heartbeat speed if SFX on
-    if (sfxEnabled) refreshHeartbeatRate();
+    // nudge health slightly by price motion
+    const priceToHealth = Math.max(0, Math.min(1, lastPrice * 10));
+    setHealth(health*0.92 + priceToHealth*0.08);
   }catch(e){
-    updatedLabel.textContent = "—:—:—";
+    console.error("health fetch", e);
   }
 }
 
-/* ===== Normalize trades ===== */
-function normalizeTrades(arr){
-  return arr.map(x=>{
-    if (x.time && x.type) return x;
-    const type = (x.side || "").toLowerCase()==="buy" ? "feed" : "starve";
-    const valueUsd = (x.price ?? 0) * (x.amount ?? 0);
-    const priceUsd = x.price ?? 0;
-    const time = x.ts ?? Date.now();
-    return { time, type, valueUsd, priceUsd };
-  });
-}
-
-/* ===== Poll: /trades ===== */
-let lastPlayedTradeTime = 0;
+// /trades
 async function pollTrades(){
   try{
-    const r = await fetch(`${API}/trades`, { cache:"no-store" });
-    const j = await r.json();
-    const list = Array.isArray(j) ? j : (j.trades || []);
-    const trades = normalizeTrades(list)
-      .sort((a,b)=>b.time-a.time)
-      .slice(0,12);
+    const r = await fetch(`${API}/trades`);
+    const arr = await r.json();
 
+    // supports either normalized [{time,type,valueUsd,priceUsd}] or Jupiter-ish shape
+    const rows = Array.isArray(arr) ? arr.map(x => {
+      if (x.valueUsd !== undefined) return x;
+      // jupiter-ish fallback (example mapping)
+      return {
+        time: (x.ts ?? x.time ?? Date.now()),
+        type: (x.side ?? x.type ?? "feed").toString().toLowerCase()==="buy" ? "feed" : "starve",
+        valueUsd: x.valueUsd ?? ((x.price ?? 0) * (x.amount ?? 0)),
+        priceUsd: x.price ?? x.usdPrice ?? 0
+      }
+    }) : [];
+
+    // fill table (Time, Type, Value, Price) — type is colored text (no dots)
     tradesBody.innerHTML = "";
     let buys=0, sells=0;
-    let newest = null;
-
-    for (const tr of trades){
-      const row = document.createElement("div");
-      row.className = "trade";
-      const t = fmtTime(tr.time);
-      const typeTxt = tr.type === "feed" ? "Feed" : "Starve";
-      const valueTxt = fmtUSDSmall(tr.valueUsd ?? 0);
-      const priceTxt = fmtUSD(tr.priceUsd ?? 0);
-
-      row.innerHTML = `
-        <div class="c-time">${t}</div>
-        <div class="c-type type ${tr.type}">${typeTxt}</div>
-        <div class="c-value">${valueTxt}</div>
-        <div class="c-price">${priceTxt}</div>
+    rows.slice(0,8).forEach(it=>{
+      const tr = document.createElement("tr");
+      const cls = it.type==="feed" ? "type-feed" : "type-starve";
+      tr.innerHTML = `
+        <td class="left">${fmtTime(it.time)}</td>
+        <td class="left ${cls}">${it.type.charAt(0).toUpperCase()+it.type.slice(1)}</td>
+        <td class="left">${fmtUSD(it.valueUsd)}</td>
+        <td class="left">${fmtUSD(it.priceUsd)}</td>
       `;
-      tradesBody.appendChild(row);
+      tradesBody.appendChild(tr);
+      if(it.type==="feed") buys += it.valueUsd; else sells += it.valueUsd;
+    });
 
-      if (tr.type === "feed") buys += tr.valueUsd ?? 0;
-      if (tr.type === "starve") sells += tr.valueUsd ?? 0;
+    // drive net flow needle
+    const range = buys + sells || 1;
+    net = Math.max(0, Math.min(1, (buys - sells) / range * 0.5 + 0.5)); // 0..1
+    const pct = Math.round(net*100);
+    flowNeedle.style.width = `${pct}%`;
+    flowLabel.textContent = pct>52 ? "Feeding" : pct<48 ? "Starving" : "Neutral";
 
-      if (!newest || tr.time > newest.time) newest = tr;
-    }
-
-    // Net flow → UI + tiny health nudge
-    const sum = buys + sells;
-    const dir = sum>0 ? (buys - sells) / sum : 0; // -1..+1
-    flows.push(dir);
-    if (flows.length > FLOW_WINDOW) flows.shift();
-    const avg = flows.reduce((a,b)=>a+b,0) / flows.length;
-    setFlow(avg);
-    setHealth(health + avg*0.02);
-
-    // Play a cue for the newest trade (after user enabled SFX)
-    if (sfxEnabled && newest && newest.time > lastPlayedTradeTime){
-      if (newest.type === "feed") playBloop(0.08);
-      else playCrackle(0.1);
-      lastPlayedTradeTime = newest.time;
-    }
-
+    // gentle health nudge
+    setHealth( health*0.9 + (net)*0.1 );
   }catch(e){
-    // ignore transient errors
+    console.error("trades fetch", e);
   }
 }
 
-/* ===== Decay driver ===== */
-function tickDecay(){
-  setHealth(health - 0.01);            // 1% per tick
-  setMutation(mutation + 0.003*health); // slow creep
+/* ===== health & stage ===== */
+function setHealth(h){
+  health = Math.max(0, Math.min(1, h));
+  healthBar.style.width = `${Math.round(health*100)}%`;
+  healthPct.textContent = `${Math.round(health*100)}%`;
+  // stage gates (placeholder)
+  const s = health>0.66 ? 2 : 1;
+  if (Number(stageNum.textContent) !== s){
+    stageNum.textContent = s;
+    stageBadge.textContent = s===1 ? "Stage 1 · The Cell" : "Stage 2 · ????";
+  }
 }
 
-/* ===== Interactions ===== */
+/* decay */
+function tickDecay(){
+  setHealth(health - 0.01); // 1% / tick
+}
+
+/* ===== SFX (very subtle) ===== */
+let AC, noiseNode, noiseGain;
+function initAudio(){
+  if(AC) return;
+  AC = new (window.AudioContext||window.webkitAudioContext)();
+  // brown noise
+  const bufferSize = 2 * AC.sampleRate;
+  const noiseBuffer = AC.createBuffer(1, bufferSize, AC.sampleRate);
+  const data = noiseBuffer.getChannelData(0);
+  let lastOut = 0.0;
+  for (let i = 0; i < bufferSize; i++) {
+    const white = Math.random() * 2 - 1;
+    data[i] = (lastOut + (0.02 * white)) / 1.02;
+    lastOut = data[i];
+    data[i] *= 0.6;
+  }
+  noiseNode = AC.createBufferSource();
+  noiseNode.buffer = noiseBuffer;
+  noiseNode.loop = true;
+
+  noiseGain = AC.createGain();
+  noiseGain.gain.value = 0.08; // raise if you want it louder
+
+  const lp = AC.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 500;
+
+  noiseNode.connect(lp).connect(noiseGain).connect(AC.destination);
+  noiseNode.start();
+}
+
+/* UI events */
+let sfx=false;
+sfxBtn.addEventListener("click", async () => {
+  sfx = !sfx;
+  sfxBtn.textContent = sfx ? "🔊 SFX On" : "🔇 SFX Off";
+  if (sfx){
+    if (!AC) initAudio();
+    else await AC.resume();
+  }else{
+    if (AC && AC.state !== "suspended") await AC.suspend();
+  }
+});
+
 feedBtn.addEventListener("click", (e)=>{
   e.preventDefault();
-  setHealth(health + 0.06);
-  if (sfxEnabled) playBloop(0.12); // tactile feedback
+  setHealth(health + 0.04); // micro nudge
 });
 
-sfxBtn.addEventListener("click", async ()=>{
-  if (!sfxEnabled) {
-    await initAudio();     // creates audio context & starts ambience + heartbeat
-    sfxEnabled = true;
-    sfxBtn.textContent = "🔊 SFX On";
-  } else {
-    stopAudio();
-    sfxEnabled = false;
-    sfxBtn.textContent = "🔇 SFX Off";
-  }
-});
+/* set swap link if you have it */
+if (TOKEN_SWAP_URL && TOKEN_SWAP_URL !== "#") tradeBtn.href = TOKEN_SWAP_URL;
 
 /* ===== Schedules ===== */
 setInterval(tickDecay, 10_000);
 setInterval(pollHealth, POLL_HEALTH_MS);
 setInterval(pollTrades, POLL_TRADES_MS);
 
-// initial
+// boot
 pollHealth();
 pollTrades();
-
-/* ===========================================================
-   ==============  W O M B   S O U N D S  ====================
-   Pure Web Audio — no external files
-=========================================================== */
-let AC, master, noiseSrc, noiseGain, noiseLP, hbTimer = null;
-
-// Create a small looped noise buffer
-function makeNoiseBuffer(ctx, seconds=1){
-  const rate = ctx.sampleRate;
-  const length = Math.floor(rate * seconds);
-  const buf = ctx.createBuffer(1, length, rate);
-  const data = buf.getChannelData(0);
-  for (let i=0;i<length;i++){
-    // pink-ish noise feel (integrate white a little)
-    const w = (Math.random()*2-1);
-    data[i] = (data[i-1] || 0)*0.98 + w*0.02;
-  }
-  return buf;
-}
-
-async function initAudio(){
-  AC = new (window.AudioContext || window.webkitAudioContext)();
-  master = AC.createGain();
-  master.gain.value = 0.8;
-  master.connect(AC.destination);
-
-  // Ambient fluid: looped noise -> lowpass -> gentle gain
-  noiseSrc = AC.createBufferSource();
-  noiseSrc.buffer = makeNoiseBuffer(AC, 2.0);
-  noiseSrc.loop = true;
-
-  noiseLP = AC.createBiquadFilter();
-  noiseLP.type = "lowpass";
-  noiseLP.frequency.value = 280;          // muffled
-  noiseLP.Q.value = 0.6;
-
-  noiseGain = AC.createGain();
-  noiseGain.gain.value = 0.06;            // subtle bed
-
-  noiseSrc.connect(noiseLP).connect(noiseGain).connect(master);
-  noiseSrc.start();
-
-  // Start heartbeat scheduler
-  refreshHeartbeatRate();
-}
-
-// Stop everything
-function stopAudio(){
-  if (!AC) return;
-  try { noiseSrc && noiseSrc.stop(); } catch {}
-  try { hbTimer && clearInterval(hbTimer); } catch {}
-  hbTimer = null;
-  AC.close();
-  AC = null;
-}
-
-// Heartbeat: two thumps “lub-dub” using short filtered noise + sine kick
-function scheduleBeat(){
-  if (!AC) return;
-  const t = AC.currentTime;
-
-  // helper: envelope for a one-shot
-  const env = (gainNode, start, a=0.005, d=0.12, peak=0.9, sustain=0.0)=>{
-    gainNode.gain.cancelScheduledValues(start);
-    gainNode.gain.setValueAtTime(0, start);
-    gainNode.gain.linearRampToValueAtTime(peak, start + a);
-    gainNode.gain.exponentialRampToValueAtTime(Math.max(0.0001, sustain), start + a + d);
-  };
-
-  // thump 1 (kick + body)
-  {
-    const g = AC.createGain(); g.gain.value = 0; g.connect(master);
-    const osc = AC.createOscillator(); osc.type = "sine"; osc.frequency.setValueAtTime(110, t);
-    osc.frequency.exponentialRampToValueAtTime(50, t+0.08);
-    osc.connect(g);
-    env(g, t, 0.004, 0.1, 0.25);
-    osc.start(t); osc.stop(t+0.15);
-  }
-  {
-    const g = AC.createGain(); g.gain.value = 0; g.connect(master);
-    const n = AC.createBufferSource(); n.buffer = makeNoiseBuffer(AC, 0.1); n.loop = false;
-    const lp = AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value = 220;
-    n.connect(lp).connect(g);
-    env(g, t, 0.003, 0.09, 0.08);
-    n.start(t); n.stop(t+0.12);
-  }
-
-  // thump 2 a moment later (dub)
-  const dt = 0.23; // spacing between lub and dub
-  {
-    const g = AC.createGain(); g.gain.value = 0; g.connect(master);
-    const osc = AC.createOscillator(); osc.type = "sine"; osc.frequency.setValueAtTime(95, t+dt);
-    osc.frequency.exponentialRampToValueAtTime(55, t+dt+0.08);
-    osc.connect(g);
-    env(g, t+dt, 0.004, 0.1, 0.18);
-    osc.start(t+dt); osc.stop(t+dt+0.15);
-  }
-  {
-    const g = AC.createGain(); g.gain.value = 0; g.connect(master);
-    const n = AC.createBufferSource(); n.buffer = makeNoiseBuffer(AC, 0.1); n.loop = false;
-    const lp = AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value = 200;
-    n.connect(lp).connect(g);
-    env(g, t+dt, 0.003, 0.09, 0.06);
-    n.start(t+dt); n.stop(t+dt+0.12);
-  }
-}
-
-// Set heartbeat rate based on health (and re-schedule timer)
-function refreshHeartbeatRate(){
-  if (!AC) return;
-  if (hbTimer) clearInterval(hbTimer);
-  // BPM: 56 (weak) .. 88 (stronger) tied to health
-  const bpm = 56 + Math.round(health * 32);
-  const intervalMs = Math.max(400, Math.min(1500, (60_000 / bpm)));
-  scheduleBeat(); // fire one immediately
-  hbTimer = setInterval(scheduleBeat, intervalMs);
-  heartbeat.textContent = `${Math.round(bpm)} bpm`;
-}
-
-/* One-shots for events */
-function playBloop(vol=0.1){
-  if (!AC) return;
-  const t = AC.currentTime;
-  const g = AC.createGain(); g.gain.value = 0; g.connect(master);
-  const osc = AC.createOscillator(); osc.type = "sine";
-  osc.frequency.setValueAtTime(520, t);
-  osc.frequency.exponentialRampToValueAtTime(840, t+0.08);
-  const lp = AC.createBiquadFilter(); lp.type="lowpass"; lp.frequency.value = 1600;
-  osc.connect(lp).connect(g);
-  // envelope
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vol, t+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001, t+0.18);
-  osc.start(t); osc.stop(t+0.22);
-}
-
-function playCrackle(vol=0.12){
-  if (!AC) return;
-  const t = AC.currentTime;
-  const src = AC.createBufferSource();
-  const buf = makeNoiseBuffer(AC, 0.2);
-  src.buffer = buf; src.loop = false;
-  const bp = AC.createBiquadFilter(); bp.type="bandpass"; bp.frequency.value = 420; bp.Q.value = 5;
-  const g = AC.createGain(); g.gain.value = 0;
-  src.connect(bp).connect(g).connect(master);
-  // envelope
-  g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(vol, t+0.02);
-  g.gain.exponentialRampToValueAtTime(0.0001, t+0.25);
-  src.start(t); src.stop(t+0.26);
-}
