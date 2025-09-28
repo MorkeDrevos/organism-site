@@ -1,6 +1,6 @@
-/***** CONFIG (you can later swap simulator with real fetchers) *****/
-const MAX_TRADES = 4;     // show only 4 most recent
-const DECAY_TXT = "1% / 10m";
+/***** CONFIG *****/
+const MAX_TRADES = 4;           // show only 4 most recent in the feed
+const DECAY_TXT  = "1% / 10m";
 
 /***** DOM *****/
 const canvas   = document.getElementById('org-canvas');
@@ -33,10 +33,27 @@ const tradesBody = document.getElementById('trades-body');
 
 const feedBtn    = document.getElementById('feedBtn');
 const sfxBtn     = document.getElementById('sfxBtn');
+const themeBtn   = document.getElementById('themeBtn');
+
+/***** Theme: public 'Lab Lights' toggle with persistence *****/
+function applyTheme(name){
+  document.body.classList.toggle('theme-warm', name==='warm');
+  // Button label reflects the OTHER option
+  themeBtn.textContent = name==='warm' ? 'Lab Lights: Cool' : 'Lab Lights: Warm';
+  localStorage.setItem('organism_theme', name);
+}
+(function initTheme(){
+  const saved = localStorage.getItem('organism_theme');
+  applyTheme(saved==='warm' ? 'warm' : 'cool'); // default cool
+})();
+themeBtn.addEventListener('click', ()=>{
+  const current = localStorage.getItem('organism_theme')==='warm' ? 'warm' : 'cool';
+  applyTheme(current==='warm' ? 'cool' : 'warm');
+});
 
 /***** State *****/
 let W=0, H=0, t=0;
-let HEALTH=0.45, MUT=0.07, FLOW=0.0;   // 0..1, -1..+1 for FLOW
+let HEALTH=0.48, MUT=0.07, FLOW=0.0;   // 0..1, -1..+1 for FLOW
 let STAGE=1;
 
 /***** Resize *****/
@@ -49,17 +66,15 @@ resizeCanvas();
 
 /***** Helpers *****/
 const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-const lerp  = (a,b,k)=>a+(b-a)*k;
 function nowHHMMSS(){
-  const d=new Date();
-  const p=n=>String(n).padStart(2,'0');
+  const d=new Date(); const p=n=>String(n).padStart(2,'0');
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
 /***** Womb draw *****/
 const motes = Array.from({length:28},()=>({
-  x: Math.random()*W,
-  y: Math.random()*H,
+  x: Math.random()*window.innerWidth,
+  y: Math.random()*window.innerHeight,
   dx:(Math.random()-.5)*0.3,
   dy:(Math.random()-.5)*0.3,
   r: 0.6 + Math.random()*1.6
@@ -71,7 +86,7 @@ function drawOrganism(){
 
   ctx.clearRect(0,0,W,H);
 
-  // Deep vignette
+  // Deep vignette / haze
   const gbg = ctx.createRadialGradient(W*0.5,H*0.6, H*0.05,  W*0.5,H*0.6, H*0.9);
   gbg.addColorStop(0,   'rgba(10,14,22,0.95)');
   gbg.addColorStop(0.65,'rgba(8,10,16,0.70)');
@@ -81,28 +96,24 @@ function drawOrganism(){
   // Concentric rings
   ctx.strokeStyle='rgba(120,180,255,0.08)';
   ctx.lineWidth=1.1;
-  const cx=W*0.5, cy=H*0.62; // a bit low
+  const cx=W*0.5, cy=H*0.62;
   for(let i=1;i<=9;i++){
-    ctx.beginPath();
-    ctx.arc(cx,cy, i*80, 0, Math.PI*2);
-    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx,cy, i*80, 0, Math.PI*2); ctx.stroke();
   }
 
-  // Haze glow center
+  // Center glow
   const glow = ctx.createRadialGradient(cx,cy, 10, cx,cy, 220);
   glow.addColorStop(0,'rgba(210,230,255,0.85)');
   glow.addColorStop(0.4,'rgba(160,200,255,0.35)');
   glow.addColorStop(1,'rgba(0,0,0,0)');
-  ctx.fillStyle=glow;
-  ctx.beginPath(); ctx.arc(cx,cy, 220, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(cx,cy, 220, 0, Math.PI*2); ctx.fill();
 
   // Nucleus
   const R = 40 + 16*Math.sin(t*1.4);
   const nuc = ctx.createRadialGradient(cx,cy, 2, cx,cy, R);
   nuc.addColorStop(0,'rgba(255,255,255,0.95)');
   nuc.addColorStop(1,'rgba(180,210,255,0.15)');
-  ctx.fillStyle=nuc;
-  ctx.beginPath(); ctx.arc(cx,cy, R, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle=nuc; ctx.beginPath(); ctx.arc(cx,cy, R, 0, Math.PI*2); ctx.fill();
 
   // Umbilical tether
   tetherPhase += 0.012;
@@ -112,10 +123,8 @@ function drawOrganism(){
   const ctrlY   = cy - 40 + Math.sin(tetherPhase)*30;
   ctx.strokeStyle='rgba(255,220,240,0.35)';
   ctx.lineWidth=6; ctx.lineCap='round';
-  ctx.beginPath();
-  ctx.moveTo(anchorX,anchorY);
-  ctx.quadraticCurveTo(ctrlX,ctrlY, cx,cy);
-  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(anchorX,anchorY);
+  ctx.quadraticCurveTo(ctrlX,ctrlY, cx,cy); ctx.stroke();
 
   // Floating motes
   for(const m of motes){
@@ -130,17 +139,15 @@ function drawOrganism(){
 }
 
 /***** UI setters *****/
-function setHealth(p){ // p: 0..1
+function setHealth(p){
   HEALTH = clamp(p,0,1);
   const pct = Math.round(HEALTH*100);
   healthPct.textContent = pct+'%';
   healthBar.style.width = pct+'%';
   healthNum.textContent = pct+'%';
-  // ring arc in degrees
   healthRing.style.setProperty('--val', 360*HEALTH);
 }
-
-function setMutation(p){ // p:0..1
+function setMutation(p){
   MUT = clamp(p,0,1);
   const pct = Math.round(MUT*100);
   mutPct.textContent = pct+'%';
@@ -148,8 +155,7 @@ function setMutation(p){ // p:0..1
   mutNum.textContent = pct+'%';
   mutRing.style.setProperty('--val', 360*MUT);
 }
-
-function setFlow(v){ // v:-1..+1
+function setFlow(v){
   FLOW = clamp(v,-1,1);
   const w = Math.round((FLOW*0.5+0.5)*100);
   flowBarTop.style.width = w+'%';
@@ -158,21 +164,15 @@ function setFlow(v){ // v:-1..+1
   flowLabelTop.textContent = label;
   flowTiny.textContent = label;
 }
-
 function setStage(n){
   STAGE = n;
   stageNum.textContent = n;
   stageSmall.textContent = n;
   stageText.textContent = n;
 }
-function setDecayText(s){
-  decayText.textContent = s;
-  document.getElementById('decayRate').textContent = s;
-}
 
 /***** Trades (minimal list) *****/
 function renderTrades(items){
-  // items: [{time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd:Number, priceUsd:Number}, ...]
   tradesBody.innerHTML = '';
   const subset = items.slice(0,MAX_TRADES);
   for(const it of subset){
@@ -208,38 +208,53 @@ function simTradesTick(){
   setMutation( clamp(MUT + (Math.random()-0.5)*0.01, 0, 1) );
 }
 
-function updateTopClock(){
-  updatedLabel.textContent = nowHHMMSS();
-}
+/***** Clock *****/
+function updateTopClock(){ updatedLabel.textContent = nowHHMMSS(); }
 
-/***** Buttons *****/
-feedBtn.addEventListener('click', (e)=>{
-  e.preventDefault();
-  setHealth( clamp(HEALTH + 0.04, 0, 1) );
-  setFlow( clamp(FLOW+0.15, -1, 1) );
+/***** Audio (optional) *****/
+let AC=null, gain=null;
+function initAudio(){
+  if(AC) return;
+  AC = new (window.AudioContext||window.webkitAudioContext)();
+  const o=AC.createOscillator(), g1=AC.createGain();
+  o.type='sine'; o.frequency.value=58; g1.gain.value=0.018; o.connect(g1);
+
+  const n=AC.createBufferSource(); const buf=AC.createBuffer(1, AC.sampleRate*2, AC.sampleRate);
+  const ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*0.11;
+  n.buffer=buf; n.loop=true; const g2=AC.createGain(); g2.gain.value=0.028; n.connect(g2);
+
+  gain=AC.createGain(); gain.gain.value=0; g1.connect(gain); g2.connect(gain); gain.connect(AC.destination);
+  o.start(); n.start();
+}
+sfxBtn.addEventListener('click',()=>{
+  if(!AC){ initAudio(); sfxBtn.textContent='🔊 SFX On'; gain.gain.linearRampToValueAtTime(0.06, AC.currentTime+0.35); }
+  else if(gain.gain.value>0){ gain.gain.linearRampToValueAtTime(0.0, AC.currentTime+0.2); sfxBtn.textContent='🔇 SFX Off'; }
+  else { gain.gain.linearRampToValueAtTime(0.06, AC.currentTime+0.3); sfxBtn.textContent='🔊 SFX On'; }
 });
 
 /***** Boot *****/
 function boot(){
   setStage(1);
-  setDecayText(DECAY_TXT);
-  setHealth(0.48);
-  setMutation(0.07);
+  decayText.textContent = DECAY_TXT;
+  document.getElementById('decayRate').textContent = DECAY_TXT;
+
+  setHealth(HEALTH);
+  setMutation(MUT);
+  setFlow(0.0);
+
   priceLabel.textContent = '$0.01';
   updateTopClock();
 
+  // draw + timers
   drawOrganism();
-
-  // schedules
   setInterval(updateTopClock, 6000);
   setInterval(simTradesTick, 4000);
 
-  // gentle flow settling
+  // gentle flow/health settling
   setInterval(()=>{
     const tgt = 0.55 + (FLOW-0.5)*0.2;
     const next = HEALTH + (tgt-HEALTH)*0.04;
     setHealth( clamp(next,0,1) );
   }, 4000);
 }
-
 boot();
