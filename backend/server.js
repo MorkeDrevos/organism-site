@@ -1,4 +1,4 @@
-BEACHFRONT RETREATS SL// backend/server.js
+// backend/server.js
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
