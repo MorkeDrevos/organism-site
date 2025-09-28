@@ -3,69 +3,70 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>THE ORGANISM — Live Habitat</title>
+  <title>THE ORGANISM – Live Habitat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- ===== Top Bar ===== -->
+  <!-- ===== Top bar ===== -->
   <header class="topbar">
     <div class="brand">THE ORGANISM</div>
     <span id="stageBadge" class="badge">Stage 1 · The Cell</span>
   </header>
 
-  <!-- ===== Creature (fullscreen canvas) ===== -->
+  <!-- ===== Creature Canvas ===== -->
   <canvas id="org-canvas"></canvas>
 
-  <!-- ===== HUD (status, price, net flow, controls) ===== -->
+  <!-- ===== HUD ===== -->
   <section class="hud">
     <div class="hud-left">
-      <div>Status: <span id="status" class="ok">Alive</span> · 
-      Heartbeat: <span id="heartbeat" class="ok">Stable</span></div>
-      <div>Price <span id="priceLabel">$—</span></div>
-      <div>Updated <span id="updatedLabel">--:--:--</span></div>
+      <div>Status: <span id="status" class="live-dot">Alive</span></div>
+      <div>Heartbeat: <span id="heartbeat">Stable</span></div>
     </div>
 
     <div class="hud-center">
-      <button id="feedBtn" class="btn ghost">⚡ Feed</button>
-      <a id="tradeBtn" class="btn ghost" href="#" target="_blank">Open Swap</a>
-      <button id="sfxBtn" class="btn ghost" type="button">🔇 SFX Off</button>
+      <button id="feedBtn" class="btn">⚡ Feed</button>
+      <a id="tradeBtn" class="btn" href="#" target="_blank">Open Swap</a>
+      <button id="sfxBtn" class="btn">🔇 SFX Off</button>
     </div>
 
     <div class="hud-right">
+      <div>Price $<span id="priceLabel">0.0000</span></div>
+      <div>Updated <span id="updatedLabel">--:--:--</span></div>
       <div class="flowline">
         <div class="flow">
           <span id="flowBar"></span>
+          <span id="flowLabel">Neutral</span>
         </div>
-        <span id="flowLabel">Neutral</span>
       </div>
-      <div class="chip">Net Flow (5m)</div>
     </div>
   </section>
 
-  <!-- ===== Bottom Dock (Vitals + Trades) ===== -->
-  <main class="dock">
-    <!-- Vitals -->
-    <section class="card">
-      <h3>Vitals <span class="live-dot">Live</span></h3>
-      <div>Health <div class="bar"><span id="healthBar" style="width:0%"></span></div> <span id="healthPct">0%</span></div>
-      <div>Mutation <div class="bar"><span id="mutBar" style="width:0%"></span></div> <span id="mutPct">0%</span></div>
+  <!-- ===== Bottom Dock ===== -->
+  <section class="dock">
+    <div class="card">
+      <h3>Vitals <span class="chip">Live</span></h3>
+      <div>Health <span id="healthPct">0%</span></div>
+      <div id="healthBar" class="bar"></div>
+      <div>Mutation <span id="mutPct">0%</span></div>
+      <div id="mutBar" class="bar"></div>
       <div>Decay <span id="decayRate">1% / 10m</span></div>
       <div>Stage <span id="stageNum">1</span></div>
-    </section>
+    </div>
 
-    <!-- Trades -->
-    <section class="card">
-      <h3>Feeding / Starving <span class="live-dot">Live</span></h3>
+    <div class="card">
+      <h3>Feeding / Starving <span class="chip">Live</span></h3>
       <table class="table">
         <thead>
           <tr><th>Time</th><th>Type</th><th>Value (USD)</th><th>Price (USD)</th></tr>
         </thead>
         <tbody id="trades-body"></tbody>
       </table>
-    </section>
-  </main>
+    </div>
+  </section>
 
-  <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
+  <footer class="foot">
+    © The Organism — Experimental art/game interface. Not financial advice.
+  </footer>
 
   <script src="app.js"></script>
 </body>
