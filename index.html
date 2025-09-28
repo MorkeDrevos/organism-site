@@ -1,94 +1,114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, user-scalable=no"
-  />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE ORGANISM — Live Habitat</title>
   <link rel="stylesheet" href="styles.css" />
-  <script>
-    // Point to your Render backend
-    window.__CONFIG__ = {
-      apiBase: "https://organism-backend.onrender.com",
-      sfx: false
-    };
-  </script>
+  <style>
+    /* tiny helpers for the new USD value column */
+    .t-right { text-align:right }
+    .t-mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .muted { opacity:.7 }
+    .buy { color:#4ade80 }     /* green */
+    .sell { color:#f87171 }    /* red */
+    .row { display:grid; grid-template-columns: 92px 1fr 1fr 112px; gap:14px; align-items:center; padding:14px 18px; border-radius:14px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
+    .row + .row { margin-top:10px; }
+    .head { opacity:.65; font-size:.9rem; letter-spacing:.02em; }
+    .trades-wrap { padding:18px }
+  </style>
 </head>
 <body>
-  <main class="page">
-    <header class="topbar">
-      <div class="brand">THE ORGANISM</div>
-      <div class="stage-badge">
-        <span id="stage-label">Stage 1 · The Cell</span>
+  <main class="wrap">
+    <section class="panel hero">
+      <div class="hero-head">
+        <div class="eyebrow">THE ORGANISM</div>
+        <div class="badge" id="stageBadge">Stage 1 • The Cell</div>
       </div>
-    </header>
 
-    <section class="card organism-card">
-      <div class="status-row">
-        <span>Status: <b id="status-word" class="accent">Alive</b></span>
-        <span>— Heartbeat: <b>Stable</b></span>
-        <span class="motto">“Feed it or watch it die.”</span>
-      </div>
+      <h1 class="title">THE ORGANISM</h1>
+      <p class="subtitle">
+        Status: <span id="status" class="ok">Alive</span> — Heartbeat: <span id="heartbeat">Stable</span>
+        — <em>“Feed it or watch it die.”</em>
+      </p>
 
       <div class="organism-wrap">
-        <canvas id="org-canvas" width="560" height="560"></canvas>
-        <div class="ring ring-1"></div>
-        <div class="ring ring-2"></div>
-        <div class="ring ring-3"></div>
+        <canvas id="organism" width="560" height="560"></canvas>
+        <div class="ring"></div><div class="ring ring2"></div><div class="ring ring3"></div>
       </div>
 
-      <div class="actions-row">
-        <button id="feed-btn" class="btn primary">⚡ FEED THE ORGANISM</button>
-        <a id="trade-btn" class="btn" target="_blank" rel="noreferrer">Open Swap</a>
-        <button id="sfx-btn" class="btn">🔇 SFX Off</button>
+      <div class="btns">
+        <button id="feedBtn" class="btn primary">⚡ FEED THE ORGANISM</button>
+        <a id="tradeBtn" class="btn" href="#" target="_blank" rel="noopener">Open Swap</a>
+        <button id="sfxBtn" class="btn">🔇 SFX Off</button>
       </div>
     </section>
 
     <section class="grid">
-      <div class="card panel">
+      <div class="panel stats">
         <h3>Vitals</h3>
-        <div class="vital">
-          <span>Health</span>
-          <div class="bar"><span id="health-bar"></span></div>
-        </div>
-
-        <div class="vital">
-          <span>Mutation Progress</span>
-          <div class="bar"><span id="mut-bar"></span></div>
-        </div>
-
         <div class="kv">
-          <div><span class="dim">Decay</span> <b id="decay-rate">1% / 10m</b></div>
-          <div><span class="dim">Stage</span> <b id="stage-num">1</b></div>
-          <div><span class="dim">Price</span> <b id="price">$—</b></div>
-          <div><span class="dim">Updated</span> <b id="updated">—:—:—</b></div>
+          <div>Health</div>
+          <div class="bar"><span id="healthBar" style="width:38%"></span></div>
         </div>
-
-        <div class="flow-row">
-          <span class="dim">Net Flow (5m)</span>
-          <div class="flow-meter" title="Buys minus sells last ~5 minutes">
-            <span id="flow-meter"></span>
-          </div>
-          <span id="flow-label" class="flow-label">Neutral</span>
+        <div class="kv">
+          <div>Mutation Progress</div>
+          <div class="bar"><span id="mutBar" style="width:0%"></span></div>
+        </div>
+        <div class="kv">
+          <div>Decay</div>
+          <div><span id="decayRate">1% / 10m</span></div>
+        </div>
+        <div class="kv">
+          <div>Stage</div>
+          <div><span id="stageNum">1</span></div>
+        </div>
+        <div class="kv">
+          <div>Price</div>
+          <div class="t-mono" id="price">$—</div>
+        </div>
+        <div class="kv">
+          <div>Updated</div>
+          <div id="timestamp">—:—:—</div>
+        </div>
+        <div class="kv">
+          <div>Net Flow (5m)</div>
+          <div class="bar"><span id="flowBar" style="width:50%"></span></div>
+          <div id="flowWord" class="muted">Neutral</div>
         </div>
       </div>
 
-      <div class="card panel">
+      <div class="panel">
         <h3>Trades — Feeding / Starving</h3>
-        <div id="trades" class="tape"></div>
+        <div class="trades-wrap">
+          <!-- header -->
+          <div class="row head t-mono">
+            <div>Side</div>
+            <div class="t-right">Price (USD)</div>
+            <div class="t-right">Value (USD) <span class="muted">(size)</span></div>
+            <div class="t-right">Time</div>
+          </div>
+          <div id="trades"></div>
+        </div>
       </div>
     </section>
 
-    <section class="card">
+    <section class="panel">
       <h3>Mutation Archive</h3>
       <ol id="archive">
-        <li><b>Stage 1: The Cell</b> — Born weak, fragile, dependent on constant feeding.</li>
+        <li><strong>Stage 1: The Cell</strong> — Born weak, fragile, dependent on constant feeding.</li>
       </ol>
     </section>
   </main>
 
+  <script>
+    // simple frontend config
+    window.__CONFIG__ = {
+      apiBase: "https://organism-backend.onrender.com", // ← your backend base
+      tokenMint: "7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV",
+      jupiterSwapUrl: "https://jup.ag/swap/SOL-7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV"
+    };
+  </script>
   <script src="app.js"></script>
 </body>
 </html>
