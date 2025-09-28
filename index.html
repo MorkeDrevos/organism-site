@@ -1,109 +1,65 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>THE ORGANISM — Habitat Console</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="utf-8">
+  <title>The Organism — Habitat Console</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand"><span class="dot"></span> THE ORGANISM <span class="hint">Habitat Console</span></div>
-    <div id="stageBadge" class="stage-pill">Stage 1 · The Cell</div>
-  </header>
+  <main class="wrap">
+    <header class="topbar">
+      <div class="title">THE ORGANISM</div>
+      <div class="badge" id="stageBadge">Stage 1 · The Cell</div>
+    </header>
 
-  <main class="shell">
-    <section class="grid">
-      <!-- LEFT: organism + info -->
-      <div class="panel organ">
-        <div class="status-line">
-          Status: <span id="status" class="ok">Alive</span>
-          <span class="sep">·</span>
-          Heartbeat: <span id="heartbeat">Stable</span>
-        </div>
-
-        <div class="organism-wrap">
-          <canvas id="org-canvas" width="560" height="560"></canvas>
-        </div>
-
+    <section class="main">
+      <!-- Creature -->
+      <div class="creature">
+        <canvas id="org-canvas"></canvas>
+        <div class="status">Status: <span id="status">Alive</span> · Heartbeat: <span id="heartbeat">Stable</span></div>
         <div class="controls">
-          <a id="feedBtn" class="btn" href="#" role="button">⚡ Feed</a>
-          <a id="tradeBtn" class="btn ghost" href="#" role="button">Open Swap</a>
-          <button id="sfxBtn" class="btn ghost" type="button">🔇 SFX Off</button>
+          <button id="feedBtn">⚡ Feed</button>
+          <button id="swapBtn">Open Swap</button>
+          <button id="sfxBtn">🔇 SFX Off</button>
         </div>
-
-        <div class="kv">
-          <div class="kv-row">
-            <div class="label">Price</div>
-            <div id="priceLabel" class="value mono">$—</div>
-            <div class="label right">Updated</div>
-            <div id="updatedLabel" class="value mono">—:—:—</div>
-          </div>
-          <div class="kv-row">
-            <div class="label">Net Flow (5m)</div>
-            <div class="flow-wrap"><div id="flowBar" class="bar"></div></div>
-            <div id="flowLabel" class="value micro">Neutral</div>
-          </div>
+        <div class="pricebar">
+          <span>Price: <span id="priceLabel">$—</span></span>
+          <span>Updated: <span id="updatedLabel">—:—:—</span></span>
+        </div>
+        <div class="netflow">
+          Net Flow (5m): <span id="flowLabel">Neutral</span>
+          <div class="bar"><div id="flowBar"></div></div>
         </div>
       </div>
 
-      <!-- RIGHT: vitals + trades -->
-      <div class="panel rightcol">
-        <div class="vitals box">
-          <div class="box-head">
-            <h3 class="h">Vitals</h3><span class="capsule live">Live</span>
-          </div>
+      <!-- Vitals -->
+      <div class="vitals">
+        <h3>Vitals</h3>
+        <div class="kv"><span class="label">Health</span><div class="bar"><div id="healthBar"></div></div></div>
+        <div class="kv"><span class="label">Mutation</span><div class="bar"><div id="mutBar"></div></div></div>
+        <div class="kv"><span class="label">Decay</span><span id="decayRate">1% / 10m</span></div>
+        <div class="kv"><span class="label">Stage</span><span id="stageNum">1</span></div>
+      </div>
 
-          <div class="lab-grid">
-            <div class="lab-item">
-              <div class="lab-k">Health</div>
-              <div class="lab-bar"><div id="health-bar" class="lab-fill"></div></div>
-              <div id="healthPct" class="lab-num mono">0%</div>
-            </div>
-
-            <div class="lab-item">
-              <div class="lab-k">Mutation</div>
-              <div class="lab-bar"><div id="mutBar" class="lab-fill alt"></div></div>
-              <div id="mutPct" class="lab-num mono">0%</div>
-            </div>
-
-            <div class="lab-item mini">
-              <div class="lab-k">Decay</div>
-              <div id="decayRate" class="lab-mini mono">1% / 10m</div>
-            </div>
-
-            <div class="lab-item mini">
-              <div class="lab-k">Stage</div>
-              <div id="stageNum" class="lab-mini mono">1</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="box trades">
-          <div class="box-head">
-            <h3 class="h">Feeding / Starving</h3><span class="capsule live">Live</span>
-          </div>
-
-          <table class="table">
-            <thead>
-              <tr>
-                <th class="t-left">Time</th>
-                <th class="t-left">Type</th>
-                <th class="t-left">Value (USD)</th>
-                <th class="t-left">Price (USD)</th>
-              </tr>
-            </thead>
-            <tbody id="trades-body"></tbody>
-          </table>
-        </div>
+      <!-- Trades -->
+      <div class="trades">
+        <h3>Feeding / Starving <span class="dim">Live</span></h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Value (USD)</th>
+              <th>Price (USD)</th>
+            </tr>
+          </thead>
+          <tbody id="trades-body"></tbody>
+        </table>
       </div>
     </section>
+
+    <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
   </main>
-
-  <footer class="foot">
-    © The Organism — Experimental art/game interface. Not financial advice.
-  </footer>
-
   <script src="app.js"></script>
 </body>
 </html>
