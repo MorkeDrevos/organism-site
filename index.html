@@ -7,22 +7,22 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <!-- Big title (poster-style) -->
-  <header class="hero-title">
+  <!-- Title -->
+  <header class="hero">
     <h1>ORGANISM.<span class="zero">ZERO</span></h1>
   </header>
 
-  <!-- Canvas creature (full-screen background) -->
+  <!-- Creature canvas (full screen, behind everything) -->
   <canvas id="org-canvas"></canvas>
 
-  <!-- Top controls row -->
-  <div class="top-controls">
-    <div class="chips-left">
+  <!-- Top chips -->
+  <div class="top">
+    <div class="chips">
       <span class="chip">Stage <span id="stageNum">1</span></span>
       <span class="chip live">alive</span>
       <span class="chip">stable</span>
     </div>
-    <div class="chips-right">
+    <div class="chips">
       <span class="chip">$<span id="priceLabel">0.01</span></span>
       <span class="chip">Updated <span id="updatedLabel">--:--:--</span></span>
       <a id="feedBtn" class="btn">Feed</a>
@@ -30,76 +30,34 @@
     </div>
   </div>
 
-  <!-- Left: Evolution Log -->
-  <aside class="evo-log card">
+  <!-- Left: Trades (max 3) -->
+  <aside class="trades card">
     <div class="card-head">
-      <h3>Evolution Log <span class="live-dot">Live</span></h3>
+      <h3>Feeding / Starving <span class="live-dot">Live</span></h3>
     </div>
-    <ul id="logList" class="log"></ul>
+    <ul id="tradesList" class="tlist"></ul>
   </aside>
 
-  <!-- Right: Traits Grid -->
-  <aside class="traits card">
-    <div class="card-head">
-      <h3>Specimen Traits</h3>
+  <!-- Right: Stats -->
+  <aside class="stats card">
+    <div class="row">
+      <span>Health</span><span id="healthPct">0%</span>
     </div>
+    <div class="bar aqua"><span id="healthBar" style="width:0%"></span></div>
 
-    <div class="trait">
-      <div class="row">
-        <span>Bioluminescence</span>
-        <span id="trait-biolume-pct">0%</span>
-      </div>
-      <div class="bar"><span id="trait-biolume-bar"></span></div>
+    <div class="row">
+      <span>Mutation</span><span id="mutPct">0%</span>
     </div>
-
-    <div class="trait">
-      <div class="row">
-        <span>Echo Rings</span>
-        <span id="trait-rings-pct">0%</span>
-      </div>
-      <div class="bar"><span id="trait-rings-bar"></span></div>
-    </div>
-
-    <div class="trait">
-      <div class="row">
-        <span>Eye Sparks</span>
-        <span id="trait-sparks-pct">0%</span>
-      </div>
-      <div class="bar"><span id="trait-sparks-bar"></span></div>
-    </div>
-
-    <div class="split"></div>
-
-    <div class="stat">
-      <span>Health</span>
-      <div class="bar"><span id="healthBar" style="width:0%"></span></div>
-      <span class="pct" id="healthPct">0%</span>
-    </div>
-
-    <div class="stat">
-      <span>Mutation</span>
-      <div class="bar mag"><span id="mutBar" style="width:0%"></span></div>
-      <span class="pct" id="mutPct">0%</span>
-    </div>
+    <div class="bar mag"><span id="mutBar" style="width:0%"></span></div>
   </aside>
 
-  <!-- Bottom status bar -->
+  <!-- Bottom status -->
   <footer class="status">
-    <div class="status-wrap">
-      <span>Stage <span id="stageChip">1</span></span>
-      <span>•</span>
-      <span id="lifeChip">alive</span>
-      <span>•</span>
-      <span>stable</span>
-      <span>•</span>
-      <span>$<span id="priceFoot">0.01</span></span>
-      <span>•</span>
-      <span id="clock">--:--:--</span>
+    <div class="left">
+      Stage <span id="stageChip">1</span> • <span id="lifeChip">alive</span> • stable •
+      $<span id="priceFoot">0.01</span> • <span id="clock">--:--:--</span>
     </div>
-
-    <div class="meter">
-      <span id="flowBar"></span>
-    </div>
+    <div class="meter"><span id="flowBar"></span></div>
   </footer>
 
   <script src="/app.js"></script>
