@@ -1,279 +1,247 @@
-/***** CONFIG *****/
-// If you have real endpoints, set API to your backend base and switch SIM to false.
-const API = "";         // e.g. "https://organism-backend.onrender.com"
-const SIM = true;       // simulation mode on/off
+/* ====== State ====== */
+let HEALTH = 0.54;       // 0..1
+let MUT = 0.06;          // 0..1
+let STAGE = 1;
+let FLOW = 0.5;          // 0..1 (0 left / sell, 1 right / buy)
+let AC = null;           // web audio context
+let GAIN = null;
 
-/***** DOM *****/
-const canvas = document.getElementById("org-canvas");
-const ctx     = canvas.getContext("2d", { alpha:true });
+const MAX_ROWS = 6;
 
-const statusWord   = document.getElementById("status");
-const heartbeat    = document.getElementById("heartbeat");
-const healthBar    = document.getElementById("healthBar");
-const healthPct    = document.getElementById("healthPct");
-const mutBar       = document.getElementById("mutBar");
-const mutPct       = document.getElementById("mutPct");
-const stageNum     = document.getElementById("stageNum");
-const decayRate    = document.getElementById("decayRate");
-const priceLabel   = document.getElementById("priceLabel");
-const updatedLabel = document.getElementById("updatedLabel");
-const flowBarEl    = document.getElementById("flowBar");
-const flowLabelEl  = document.getElementById("flowLabel");
-const tradesBody   = document.getElementById("trades-body");
-const sfxBtn       = document.getElementById("sfxBtn");
-const feedBtn      = document.getElementById("feedBtn");
-const tradeBtn     = document.getElementById("tradeBtn");
-const stageBadge   = document.getElementById("stageBadge");
+/* ====== DOM ====== */
+const canvas = document.getElementById('org-canvas');
+const ctx = canvas.getContext('2d', { alpha:true });
 
-/***** helpers *****/
+const statusEl = document.getElementById('status');
+const heartbeatEl = document.getElementById('heartbeat');
+const stageBadge = document.getElementById('stageBadge');
+const stageNum = document.getElementById('stageNum');
+
+const priceLabel = document.getElementById('priceLabel');
+const updatedLabel = document.getElementById('updatedLabel');
+
+const flowBar = document.getElementById('flowBar');
+const flowLabel = document.getElementById('flowLabel');
+
+const healthBar = document.getElementById('healthBar');
+const mutBar = document.getElementById('mutBar');
+const healthPct = document.getElementById('healthPct');
+const mutPct = document.getElementById('mutPct');
+const decayRate = document.getElementById('decayRate');
+
+const sfxBtn = document.getElementById('sfxBtn');
+const feedBtn = document.getElementById('feedBtn');
+const tradeBtn = document.getElementById('tradeBtn');
+const tradesBody = document.getElementById('trades-body');
+
+/* ====== Utils ====== */
 const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
-const fmtUSD = (n) => (n==null || isNaN(n)) ? "$—" : `$${n.toFixed(2)}`;
-const pad2 = (n) => String(n).padStart(2,'0');
-const hhmmss = (tsMs) => {
-  const d = tsMs ? new Date(tsMs) : new Date();
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+const fmtUSD = n => n == null ? '$—' : `$${Number(n).toFixed(2)}`;
+const nowHHMMSS = () => {
+  const d = new Date();
+  const p = (x)=> String(x).padStart(2,'0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 };
 
-/***** Canvas sizing *****/
+/* ====== Canvas sizing ====== */
 function resizeCanvas(){
-  canvas.width  = window.innerWidth;
+  canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
-window.addEventListener("resize", resizeCanvas);
+window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-/***** Animation state (womb visuals) *****/
+/* ====== Womb animation ====== */
 let t = 0;
-const motes = Array.from({ length: 26 }, () => ({
-  x: Math.random(), y: Math.random(),
-  dx: (Math.random() - 0.5)*0.002,
-  dy: (Math.random() - 0.5)*0.002,
-  r: 0.7 + Math.random()*1.4
+// random motes
+const motes = Array.from({length: 26}, () => ({
+  x: Math.random()*canvas.width,
+  y: Math.random()*canvas.height,
+  dx: (Math.random()-.5) * 0.6,
+  dy: (Math.random()-.5) * 0.6,
+  r: 0.8 + Math.random()*1.6
 }));
 
-// Audio (optional)
-let AC=null, gain=null;
-function initAudio(){
-  if (AC) return;
-  AC = new (window.AudioContext || window.webkitAudioContext)();
-  const master = AC.createGain();
-  master.gain.value = 0.12;
-
-  // Womb noise: pink-ish
-  const noise = AC.createScriptProcessor(2048, 1, 1);
-  let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
-  noise.onaudioprocess = e=>{
-    const out = e.outputBuffer.getChannelData(0);
-    for (let i=0;i<out.length;i++){
-      const white = Math.random()*2-1;
-      b0 = 0.99886*b0 + white*0.0555179;
-      b1 = 0.99332*b1 + white*0.0750759;
-      b2 = 0.96900*b2 + white*0.1538520;
-      b3 = 0.86650*b3 + white*0.3104856;
-      b4 = 0.55000*b4 + white*0.5329522;
-      b5 = -0.7616*b5 - white*0.0168980;
-      out[i] = (b0+b1+b2+b3+b4+b5+b6*0.5362)*0.11;
-      b6 = white*0.115926;
-    }
-  };
-
-  // Low heartbeat thump
-  const thump = AC.createOscillator();
-  thump.type = 'sine'; thump.frequency.value = 38;
-  const thumpGain = AC.createGain(); thumpGain.gain.value = 0.0;
-  thump.connect(thumpGain).connect(master); thump.start();
-
-  // heartbeat envelope
-  setInterval(()=>{
-    if (!gain) return;
-    thumpGain.gain.cancelScheduledValues(AC.currentTime);
-    thumpGain.gain.setValueAtTime(0.0, AC.currentTime);
-    thumpGain.gain.linearRampToValueAtTime(0.35, AC.currentTime+0.02);
-    thumpGain.gain.exponentialRampToValueAtTime(0.0001, AC.currentTime+0.35);
-  }, 900);
-
-  noise.connect(master);
-  gain = master;
-  gain.connect(AC.destination);
-}
-
-sfxBtn.addEventListener("click", ()=>{
-  if (!AC){ initAudio(); sfxBtn.textContent = "🔊 SFX On"; }
-  else {
-    if (gain.gain.value > 0.001){ gain.gain.value = 0.0; sfxBtn.textContent = "🔇 SFX Off"; }
-    else { gain.gain.value = 0.12; sfxBtn.textContent = "🔊 SFX On"; }
-  }
-});
-
-/***** Draw loop (womb) *****/
 function drawOrganism(){
   t += 0.01;
-  const W = canvas.width, H = canvas.height;
-  const cx = W/2, cy = H*0.58; // sit a bit lower
-  ctx.clearRect(0,0,W,H);
 
-  // Soft fluid haze (warm)
-  const base = 62 + 26*Math.sin(t*0.9 + 1.7);
-  let grad = ctx.createRadialGradient(cx,cy, base*0.4, cx,cy, Math.max(W,H)*0.55);
-  grad.addColorStop(0, 'rgba(255,160,120,0.28)');
-  grad.addColorStop(0.45, 'rgba(210,70,50,0.10)');
-  grad.addColorStop(1, 'rgba(10,5,8,0.0)');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,W,H);
+  // subtle warm haze (dark to warm)
+  const g = ctx.createRadialGradient(canvas.width*0.25, canvas.height*0.85, 50, canvas.width*0.75, canvas.height*0.15, Math.max(canvas.width, canvas.height));
+  g.addColorStop(0, 'rgba(180,80,40,0.03)');
+  g.addColorStop(1, 'rgba(0,0,0,0.7)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  // Ripple rings w/ slight drift
+  const cx = canvas.width * 0.5;
+  const cy = canvas.height * 0.62; // sit slightly low
+  const pulse = 8 + Math.sin(t*2) * 2 * (0.7 + HEALTH*0.3);
+
+  // concentric ripple rings
   ctx.lineWidth = 1.2;
-  for (let i=0;i<9;i++){
-    const r = 85 + i*70 + 10*Math.sin(t*0.55 + i*0.7);
-    ctx.strokeStyle = 'rgba(64,32,40,0.45)';
+  for(let r=110; r<=Math.min(canvas.width, canvas.height)*0.45; r+=60){
+    const drift = Math.sin(t*0.25 + r) * 16;
+    ctx.strokeStyle = `rgba(240,170,130,0.10)`;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.arc(cx, cy, r + drift, 0, Math.PI*2);
     ctx.stroke();
   }
 
-  // Umbilical-like tether
-  const anchorX = cx - 180 + 60*Math.sin(t*0.6);
-  const anchorY = cy - 140 + 22*Math.cos(t*0.32);
-  const endX    = cx + 12*Math.cos(t*0.7);
-  const endY    = cy + 12*Math.sin(t*0.8);
-  ctx.lineWidth = 7.5;
-  const tg = ctx.createLinearGradient(anchorX,anchorY,endX,endY);
-  tg.addColorStop(0, 'rgba(255,160,120,0.35)');
-  tg.addColorStop(1, 'rgba(255,120,140,0.85)');
-  ctx.strokeStyle = tg;
+  // nucleus (glowing)
+  const base = 44 + 10*Math.sin(t*2.1);
+  const hue = 22 + 5*Math.sin(t*0.6);
+  const grad = ctx.createRadialGradient(cx, cy, 2, cx, cy, base + pulse);
+  grad.addColorStop(0, `hsla(${hue},85%,92%,0.95)`);
+  grad.addColorStop(1, `hsla(${hue},70%,62%,0.10)`);
+  ctx.fillStyle = grad;
   ctx.beginPath();
-  ctx.moveTo(anchorX, anchorY);
-  const c1x = (anchorX+endX)/2 + 60*Math.sin(t*0.5);
-  const c1y = (anchorY+endY)/2 + 40*Math.cos(t*0.6);
-  ctx.quadraticCurveTo(c1x, c1y, endX, endY);
+  ctx.arc(cx, cy, base + pulse, 0, Math.PI*2);
+  ctx.fill();
+
+  // soft tether cord (like umbilical), slow sway
+  const sway = Math.sin(t*0.8)*60;
+  ctx.strokeStyle = 'rgba(230,160,130,0.65)';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx+base*0.6, cy-8);
+  ctx.quadraticCurveTo(cx+120+sway*0.1, cy-60, cx+180+sway, cy-40+Math.sin(t)*40);
   ctx.stroke();
 
-  // Pulsing nucleus
-  const coreR = 42 + 7*Math.sin(t*1.25);
-  const core  = ctx.createRadialGradient(cx,cy, coreR*0.12, cx,cy, coreR);
-  core.addColorStop(0, 'rgba(255,235,230,0.95)');
-  core.addColorStop(0.55, 'rgba(255,190,165,0.80)');
-  core.addColorStop(1, 'rgba(255,120,120,0.55)');
-  ctx.fillStyle = core;
-  ctx.beginPath(); ctx.arc(cx,cy, coreR, 0, Math.PI*2); ctx.fill();
+  // floating motes
+  for(const m of motes){
+    m.x += m.dx; m.y += m.dy;
+    if (m.x < 0) m.x = canvas.width;
+    if (m.x > canvas.width) m.x = 0;
+    if (m.y < 0) m.y = canvas.height;
+    if (m.y > canvas.height) m.y = 0;
 
-  // Floating motes
-  for (let m of motes){
-    m.x += m.dx * (0.6 + 0.5*Math.sin(t*0.7));
-    m.y += m.dy * (0.6 + 0.5*Math.cos(t*0.6+0.3));
-    if (m.x<0) m.x=1; if (m.x>1) m.x=0;
-    if (m.y<0) m.y=1; if (m.y>1) m.y=0;
-
-    const mx = m.x * W, my = m.y * H;
     ctx.beginPath();
-    ctx.arc(mx,my, m.r, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,220,210,0.22)';
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(250,230,210,0.35)';
     ctx.fill();
   }
 
   requestAnimationFrame(drawOrganism);
 }
-requestAnimationFrame(drawOrganism);
+drawOrganism();
 
-/***** UI binders *****/
-function setHealth(pct){ pct = clamp(pct,0,1); healthBar.style.width = (pct*100).toFixed(0)+'%'; healthPct.textContent=(pct*100).toFixed(0)+'%'; }
-function setMutation(pct){ pct = clamp(pct,0,1); mutBar.style.width    = (pct*100).toFixed(0)+'%'; mutPct.textContent=(pct*100).toFixed(0)+'%'; }
-function setStage(n){ stageNum.textContent = String(n); stageBadge.textContent = n===1 ? "Stage 1 · The Cell" : `Stage ${n}`; }
-function setFlow(v){ // v in [-1,1]
-  const pct = ((clamp(v,-1,1)+1)/2)*100; flowBarEl.style.width = pct.toFixed(0)+'%';
-  flowBarEl.style.background = v>=0 ? "linear-gradient(90deg,#4cffb5,#34e5b0)" : "linear-gradient(90deg,#ff847a,#ffb2a1)";
-  flowLabelEl.textContent = v> 0.05 ? "Feeding" : v < -0.05 ? "Starving" : "Neutral";
+/* ====== Audio (optional) ====== */
+function initAudio(){
+  if (AC) return;
+  AC = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = AC.createOscillator();
+  GAIN = AC.createGain();
+  const lfo = AC.createOscillator();
+  const lfoGain = AC.createGain();
+
+  osc.type = 'sawtooth';
+  osc.frequency.value = 35;             // womb hum
+  GAIN.gain.value = 0.0;
+
+  lfo.type = 'sine';
+  lfo.frequency.value = 1.1;            // heartbeat
+  lfoGain.gain.value = 0.25;
+
+  lfo.connect(lfoGain);
+  lfoGain.connect(GAIN.gain);
+  osc.connect(GAIN).connect(AC.destination);
+
+  osc.start(); lfo.start();
 }
 
-/***** Trades table (time, type, valueUsd, priceUsd) *****/
+/* ====== UI setters ====== */
+function setHealth(v){
+  HEALTH = clamp(v); healthBar.style.width = `${Math.round(HEALTH*100)}%`;
+  healthPct.textContent = `${Math.round(HEALTH*100)}%`;
+}
+function setMutation(v){
+  MUT = clamp(v); mutBar.style.width = `${Math.round(MUT*100)}%`;
+  mutPct.textContent = `${Math.round(MUT*100)}%`;
+}
+function setStage(n){
+  STAGE = n;
+  if (stageBadge) stageBadge.textContent = `Stage ${STAGE} · The Cell`;
+  if (stageNum) stageNum.textContent = STAGE;
+}
+function setFlow(f){ // 0..1
+  FLOW = clamp(f);
+  // bar width around center (0.5)
+  const center = 0.5;
+  const magnitude = Math.abs(FLOW-center) * 2; // 0..1
+  const px = Math.max(6, 240 * magnitude);
+  flowBar.style.width = `${px}px`;
+  flowBar.style.transform = `translateX(${(FLOW-center)*120}px)`;
+  const side = (FLOW>0.52) ? 'Feeding' : (FLOW<0.48 ? 'Starving' : 'Neutral');
+  flowLabel.textContent = side;
+}
+
+/* ====== Trades (sim / parsing) ====== */
 function addTradeRow({ time, type, valueUsd, priceUsd }){
   const tr = document.createElement('tr');
-  const isFeed = (String(type).toLowerCase()==='feed');
-  const typeCell = `<span class="${isFeed?'type-feed':'type-starve'}">${isFeed?'Feed':'Starve'}</span>`;
   tr.innerHTML = `
     <td>${time}</td>
-    <td>${typeCell}</td>
+    <td class="${type==='Feed' ? 'type-feed' : 'type-starve'}">${type}</td>
     <td>${fmtUSD(valueUsd)}</td>
     <td>${fmtUSD(priceUsd)}</td>
   `;
   tradesBody.prepend(tr);
-  // keep to ~12
-  while (tradesBody.children.length > 12) tradesBody.lastChild.remove();
+  // keep short
+  while (tradesBody.children.length > MAX_ROWS){
+    tradesBody.lastElementChild.remove();
+  }
+}
+function simTradesTick(){
+  // random-ish buys/sells around 50/50
+  const buy = Math.random() > 0.5;
+  const amt = 5 + Math.random()*40;
+  const price = 0.01; // placeholder
+  addTradeRow({
+    time: nowHHMMSS(),
+    type: buy ? 'Feed' : 'Starve',
+    valueUsd: amt,
+    priceUsd: price
+  });
+
+  // nudge net flow & health a touch
+  const delta = buy ? 0.02 : -0.02;
+  setFlow(clamp(FLOW + delta*0.3));
+  setHealth(clamp(HEALTH + delta*0.08 - 0.005)); // slight natural drift
 }
 
-/***** Simulation (fallback) *****/
-let HEALTH=0.54, MUT=0.06, STAGE=1, FLOW=0, DECAY=0.01; // health 54%, mut 6%
-function simTick(){
-  // nudge flow back to center
-  FLOW *= 0.94;
-  // tiny living drift to health
-  HEALTH = clamp( HEALTH + FLOW*0.015 - DECAY*0.002 );
-  setHealth(HEALTH);
-  setMutation(MUT);
-  setFlow(FLOW);
-  decayRate.textContent = `${(DECAY*100).toFixed(0)}%`;
-  updatedLabel.textContent = hhmmss();
-}
-function simTrades(){
-  // random "feed/starve"
-  const feed = Math.random() < 0.5;
-  const value = 6 + Math.random()*26;
-  const price = 0.01; // for now
-  const tstr = hhmmss();
-  addTradeRow({ time:tstr, type: feed?'Feed':'Starve', valueUsd:value, priceUsd:price });
-  FLOW += feed ? +0.12 : -0.12;
-  FLOW = clamp(FLOW,-1,1);
-}
-
-/***** Real polling (if you have a backend) *****/
-// Expecting:
-// GET `${API}/health` -> { price:number, timestamp:number(ms|iso) }
-// GET `${API}/trades` -> [{ time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd:number, priceUsd:number }, ...]
-async function pollHealth(){
-  if (SIM){ priceLabel.textContent = fmtUSD(0.01); updatedLabel.textContent = hhmmss(); return; }
-  try{
-    const r = await fetch(`${API}/health`, { headers:{ accept:'application/json' }});
-    const j = await r.json();
-    if (typeof j.price === 'number') priceLabel.textContent = fmtUSD(j.price);
-    updatedLabel.textContent = j.timestamp ? hhmmss(j.timestamp) : hhmmss();
-  }catch(e){ /* ignore */ }
-}
-async function pollTrades(){
-  if (SIM) return; // in sim we call simTrades instead
-  try{
-    const r = await fetch(`${API}/trades`, { headers:{ accept:'application/json' }});
-    const arr = await r.json();
-    if (Array.isArray(arr)){
-      // render newest last -> then we prepend so table top is latest
-      for (let item of arr.slice(-5)){
-        addTradeRow(item);
-      }
-    }
-  }catch(e){ /* ignore */ }
-}
-
-/***** Buttons *****/
-feedBtn.addEventListener("click", (ev)=>{
-  ev.preventDefault();
-  // micro health nudge
-  HEALTH = clamp( HEALTH + 0.04, 0, 1 );
-  FLOW   = clamp( FLOW + 0.15, -1, 1 );
-  simTick();
+/* ====== Buttons ====== */
+sfxBtn.addEventListener('click', () => {
+  if (!AC) { initAudio(); sfxBtn.textContent = '🔊 SFX On'; if (GAIN) GAIN.gain.value = 0.08; return; }
+  if (AC.state === 'suspended'){ AC.resume(); if (GAIN) GAIN.gain.value = 0.08; sfxBtn.textContent = '🔊 SFX On'; }
+  else { if (GAIN) GAIN.gain.value = 0.0; AC.suspend(); sfxBtn.textContent = '🔇 SFX Off'; }
 });
 
-/***** Boot *****/
-statusWord.textContent = "Alive";
-heartbeat.textContent  = "Stable";
-setStage(STAGE);
-setHealth(HEALTH); setMutation(MUT); setFlow(FLOW);
-priceLabel.textContent = fmtUSD(0.01);
-updatedLabel.textContent = "--:--:--";
+feedBtn.addEventListener('click', (ev) => {
+  ev.preventDefault();
+  // micro “feed” nudge
+  setHealth(clamp(HEALTH + 0.06));
+  setFlow(clamp(FLOW + 0.06));
+});
 
-// schedulers
-setInterval(simTick, 1000);
-if (SIM){
-  setInterval(simTrades, 3000);
-}else{
-  setInterval(pollHealth,  6000);
-  setInterval(pollTrades, 6000);
-}
+/* ====== Boot ====== */
+decayRate.textContent = '1% / 10m';
+setStage(1);
+setHealth(HEALTH);
+setMutation(MUT);
+priceLabel.textContent = fmtUSD(0.01);
+updatedLabel.textContent = nowHHMMSS();
+setFlow(0.5);
+
+// schedules
+setInterval(() => updatedLabel.textContent = nowHHMMSS(), 1000);
+setInterval(simTradesTick, 6000);       // sim trades every 6s
+setInterval(() => {                     // slow health decay toward ~0.5 baseline
+  const tgt = 0.5 + (FLOW-0.5)*0.2;
+  const next = HEALTH + (tgt-HEALTH)*0.04 - 0.004;
+  setHealth(clamp(next));
+}, 4000);
+
+/* ====== (Optional) hook real backend later ======
+   When you have real endpoints, replace simTradesTick + price here:
+   - fetch /health -> { price, timestamp }  -> update priceLabel, updatedLabel
+   - fetch /trades -> [{ time, type, valueUsd, priceUsd }, ...] -> addTradeRow for new items
+*/
