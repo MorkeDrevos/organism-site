@@ -1,252 +1,270 @@
-/********** Canvas + Theme-less Creature (no lab UI) **********/
-const canvas = document.getElementById('org-canvas');
-const ctx = canvas.getContext('2d', { alpha:true });
+/******** CONFIG ********/
+const API_BASE = "";          // ← set later if you wire a backend ('' keeps the sim)
+const TOKEN_MINT = "YOUR_CA_HERE"; // ← put your CA here (used when you wire real APIs)
 
-function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
-addEventListener('resize', resize); resize();
+/******** DOM ********/
+const canvas = document.getElementById("org-canvas");
+const ctx = canvas.getContext("2d", { alpha: true });
 
-let t=0;
-let HEALTH=0.52, MUT=0.08, STAGE=1, FLOW=0.50, PRICE=0.01;
+const stageNum     = document.getElementById("stageNum");
+const stageChip    = document.getElementById("stageChip");
+const priceLabel   = document.getElementById("priceLabel");
+const priceFoot    = document.getElementById("priceFoot");
+const updatedLabel = document.getElementById("updatedLabel");
+const clockEl      = document.getElementById("clock");
+const flowBar      = document.getElementById("flowBar");
 
-const motes = Array.from({length:34},()=>({
-  x: Math.random()*innerWidth,
-  y: Math.random()*innerHeight,
-  dx:(Math.random()-.5)*.28,
-  dy:(Math.random()-.5)*.28,
-  r:.6+Math.random()*1.6
-}));
+const healthBar    = document.getElementById("healthBar");
+const mutBar       = document.getElementById("mutBar");
+const healthPct    = document.getElementById("healthPct");
+const mutPct       = document.getElementById("mutPct");
 
-function draw(){
-  t += 0.01;
-  const W=canvas.width, H=canvas.height, CX=W*.5, CY=H*.62;
+const feedBtn      = document.getElementById("feedBtn");
+const tradeBtn     = document.getElementById("tradeBtn");
+const logList      = document.getElementById("logList");
 
-  ctx.clearRect(0,0,W,H);
+const traitBars = {
+  biolume: { bar: document.getElementById("trait-biolume-bar"), pct: document.getElementById("trait-biolume-pct"), v: 0 },
+  rings:   { bar: document.getElementById("trait-rings-bar"),   pct: document.getElementById("trait-rings-pct"),   v: 0 },
+  sparks:  { bar: document.getElementById("trait-sparks-bar"),  pct: document.getElementById("trait-sparks-pct"),  v: 0 },
+};
 
-  // Soft radial haze
-  const haze = ctx.createRadialGradient(CX,CY,H*.06, CX,CY,H*.95);
-  haze.addColorStop(0,'rgba(12,16,24,.92)');
-  haze.addColorStop(.7,'rgba(6,8,12,.66)');
-  haze.addColorStop(1,'rgba(4,6,10,1)');
-  ctx.fillStyle=haze; ctx.fillRect(0,0,W,H);
+/******** Helpers ********/
+const clamp = (v, a=0, b=1) => Math.min(b, Math.max(a, v));
+const nowHHMMSS = () => {
+  const d=new Date(); const p=(n)=>String(n).padStart(2,"0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+};
+const fmtUSD = (n) => `$${Number(n).toFixed(2)}`;
 
-  // Circular viewport hint (mask-like vignette)
+/******** State ********/
+let W=0,H=0,t=0;
+let HEALTH = 0.52;
+let MUT    = 0.08;
+let STAGE  = 1;
+let FLOW   = 0.5;   // 0..1 left↔right
+let PRICE  = 0.01;
+
+// for canvas motes & ripple
+let motes = [];
+const RINGS = 8;
+
+/******** Canvas Setup ********/
+function resize(){
+  canvas.width = W = window.innerWidth;
+  canvas.height = H = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+/******** Creature Render ********/
+function drawOrganism(){
+  t += 0.016;
+
+  // backdrop gradient & vignette
+  const bg = ctx.createRadialGradient(W*0.5, H*0.65, 40, W*0.5, H*0.3, Math.max(W,H));
+  bg.addColorStop(0, "rgba(20,26,44, .25)");
+  bg.addColorStop(1, "rgba(5,6,11, 1)");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0,0,W,H);
+
+  // soft haze
   ctx.save();
-  ctx.globalCompositeOperation='overlay';
-  ctx.strokeStyle='rgba(150,200,255,.10)';
-  ctx.lineWidth=1;
-  for(let i=1;i<=8;i++){
-    ctx.beginPath(); ctx.arc(CX,CY,i*90,0,Math.PI*2); ctx.stroke();
+  const haze = ctx.createRadialGradient(W*0.5, H*0.65, 10, W*0.5, H*0.5, Math.max(W,H)*0.9);
+  haze.addColorStop(0, "rgba(160,240,255,.20)");
+  haze.addColorStop(1, "rgba(160,240,255,0)");
+  ctx.globalCompositeOperation = "screen";
+  ctx.fillStyle = haze;
+  ctx.beginPath(); ctx.arc(W*0.5,H*0.62, Math.max(W,H)*0.9, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // concentric echo rings
+  ctx.save();
+  ctx.strokeStyle = "rgba(120,200,255,.12)";
+  for(let i=1;i<=RINGS;i++){
+    const rr = (Math.min(W,H)*0.55)*(i/RINGS);
+    ctx.lineWidth = 1 + Math.sin(t*0.7 + i)*0.5;
+    ctx.beginPath(); ctx.arc(W*0.5,H*0.62, rr, 0, Math.PI*2); ctx.stroke();
   }
   ctx.restore();
 
-  // Core glow
-  const pulse=(Math.sin(t*1.35)+1)/2;
-  const coreR=46 + pulse*6 + HEALTH*14;
-  const glow=ctx.createRadialGradient(CX,CY, coreR*.2, CX,CY, coreR*1.9);
-  glow.addColorStop(0,'rgba(210,245,255,.95)');
-  glow.addColorStop(.35,'rgba(170,230,255,.42)');
-  glow.addColorStop(.9,'rgba(80,140,200,.02)');
-  ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(CX,CY, coreR*1.9, 0, Math.PI*2); ctx.fill();
+  // nucleus
+  const nucR = 42 + Math.sin(t*1.5)*3 + HEALTH*8;
+  const cx = W*0.5, cy = H*0.62;
+  const glow = ctx.createRadialGradient(cx,cy, nucR*0.2, cx,cy, nucR*1.6);
+  glow.addColorStop(0, "rgba(205,235,255,.85)");
+  glow.addColorStop(1, "rgba(100,180,255,.05)");
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(cx,cy,nucR*1.6,0,Math.PI*2); ctx.fill();
 
-  // “organism” body (metaball-ish blob)
-  const wob = 10 + HEALTH*18;
-  ctx.fillStyle='rgba(140,220,255,.12)';
+  ctx.fillStyle = "rgba(215,245,255,.95)";
+  ctx.beginPath(); ctx.arc(cx,cy,nucR,0,Math.PI*2); ctx.fill();
+
+  // umbilical tether
+  ctx.save();
+  ctx.strokeStyle = "rgba(180,220,255,.45)";
+  ctx.lineWidth = 6; ctx.lineCap = "round";
+  const ax = cx, ay = cy;
+  const bx = cx - 260, by = cy - 60;
+  const c1x = cx - 90, c1y = cy - 20 + Math.sin(t*0.8)*16;
+  const c2x = cx - 180, c2y = cy - 40 + Math.cos(t*0.6)*14;
   ctx.beginPath();
-  for(let i=0;i<12;i++){
-    const a = (i/12)*Math.PI*2 + t*0.3;
-    const r = coreR + wob*Math.sin(t*0.8 + i);
-    const x = CX + Math.cos(a)*r;
-    const y = CY + Math.sin(a)*r;
-    i? ctx.lineTo(x,y): ctx.moveTo(x,y);
-  }
-  ctx.closePath(); ctx.fill();
+  ctx.moveTo(ax,ay); ctx.bezierCurveTo(c1x,c1y, c2x,c2y, bx,by); ctx.stroke();
+  ctx.restore();
 
-  // Mutation visuals
-  if(MUT>=0.12){ // biolume rays
-    ctx.save(); ctx.translate(CX,CY); ctx.rotate(t*0.06);
-    for(let k=0;k<8;k++){
-      const ang=k*(Math.PI*2/8);
-      const len=coreR+30+MUT*80;
-      ctx.strokeStyle='rgba(110,255,240,.18)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(Math.cos(ang)*coreR*.6, Math.sin(ang)*coreR*.6);
-      ctx.lineTo(Math.cos(ang)*len, Math.sin(ang)*len); ctx.stroke();
-    }
-    ctx.restore();
-  }
-  if(MUT>=0.26){ // fronds
-    ctx.save(); ctx.translate(CX,CY); ctx.rotate(-t*0.04);
-    const arms = 5 + Math.floor(MUT*4);
-    for(let i=0;i<arms;i++){
-      const ang=i*(Math.PI*2/arms);
-      const len=60 + Math.sin(t*1.1+i)*14 + MUT*60;
-      const sway=Math.sin(t*1.3+i)*10;
-      ctx.strokeStyle='rgba(120,235,210,.35)'; ctx.lineWidth=2;
-      ctx.beginPath(); ctx.moveTo(0,0);
-      ctx.quadraticCurveTo(Math.cos(ang)*(len*.3+sway), Math.sin(ang)*(len*.3-sway), Math.cos(ang)*len, Math.sin(ang)*len);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-  if(MUT>=0.38){ // eye sparks
-    const count = 3 + Math.floor(MUT*6);
-    for(let i=0;i<count;i++){
-      const a=i*(Math.PI*2/count)+t*0.3, r=coreR+24+Math.sin(t*1.3+i)*8;
-      const x=CX+Math.cos(a)*r, y=CY+Math.sin(a)*r;
-      const gr=ctx.createRadialGradient(x,y,2,x,y,10);
-      gr.addColorStop(0,'rgba(255,255,255,.9)');
-      gr.addColorStop(1,'rgba(255,120,200,.12)');
-      ctx.fillStyle=gr; ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.fill();
+  // motes
+  if (!motes.length){
+    for(let i=0;i<28;i++){
+      motes.push({
+        x: Math.random()*W, y: Math.random()*H,
+        dx: (Math.random()-.5)*0.4, dy: (Math.random()-.5)*0.4,
+        r: 1+Math.random()*1.8
+      });
     }
   }
-  if(MUT>=0.52){ // echo rings
-    ctx.save(); ctx.translate(CX,CY);
-    for(let i=0;i<3;i++){
-      const rr = coreR + 40 + (t*40 + i*35)%120;
-      ctx.strokeStyle=`rgba(130,200,255,${0.26 - i*0.06})`; ctx.lineWidth=1.5;
-      ctx.beginPath(); ctx.arc(0,0, rr, 0, Math.PI*2); ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  // ambient motes
-  ctx.fillStyle='rgba(200,220,255,.20)';
+  ctx.fillStyle = "rgba(200,220,255,.25)";
   for(const m of motes){
-    m.x += m.dx + (HEALTH-0.5)*0.06;
-    m.y += m.dy + (FLOW-0.5)*0.06;
-    if(m.x<0) m.x=W; if(m.x>W) m.x=0; if(m.y<0) m.y=H; if(m.y>H) m.y=0;
-    ctx.beginPath(); ctx.arc(m.x, m.y, m.r, 0, Math.PI*2); ctx.fill();
+    m.x += m.dx + Math.sin(t*0.05+m.y*0.001)*0.08;
+    m.y += m.dy + Math.cos(t*0.04+m.x*0.001)*0.08;
+    if (m.x<0||m.x>W) m.dx*=-1;
+    if (m.y<0||m.y>H) m.dy*=-1;
+    ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2); ctx.fill();
   }
 
-  requestAnimationFrame(draw);
+  requestAnimationFrame(drawOrganism);
 }
-requestAnimationFrame(draw);
+requestAnimationFrame(drawOrganism);
 
-/********** DOM refs **********/
-const healthBar = document.getElementById('healthBar');
-const healthNum = document.getElementById('healthNum');
-const mutBar    = document.getElementById('mutBar');
-const mutNum    = document.getElementById('mutNum');
-const stageNum  = document.getElementById('stageNum');
-const statusEl  = document.getElementById('status');
-const heartbeat = document.getElementById('heartbeat');
-const priceEl   = document.getElementById('priceLabel');
-const updatedEl = document.getElementById('updatedLabel');
-const flowBar   = document.getElementById('flowBar');
-const flowLabel = document.getElementById('flowLabel');
-const feedBtn   = document.getElementById('feedBtn');
-const sfxBtn    = document.getElementById('sfxBtn');
-const tradeBtn  = document.getElementById('tradeBtn');
-const traitsRow = document.getElementById('traitsRow');
-const tradePills= document.getElementById('tradePills');
-
-/********** Helpers **********/
-const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
-const pct = x => Math.round(x*100);
-const nowHHMMSS=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
-const usd = v => `$${Number(v).toFixed(2)}`;
-
-/********** UI setters **********/
-function setHealth(p){ HEALTH=clamp(p); healthBar.style.width=pct(HEALTH)+'%'; healthNum.textContent=pct(HEALTH)+'%'; }
-function setMutation(p){ MUT=clamp(p); mutBar.style.width=pct(MUT)+'%'; mutNum.textContent=pct(MUT)+'%'; renderTraits(); }
-function setStage(n){ STAGE=n; stageNum.textContent=String(n); }
-function setFlow(v){
-  FLOW=clamp(v);
-  flowBar.style.width = Math.round((FLOW)*100)+'%';
-  flowLabel.textContent = FLOW>0.55?'feed' : (FLOW<0.45?'starve':'neutral');
+/******** UI setters ********/
+function setStage(n){
+  STAGE = n;
+  stageNum.textContent = String(n);
+  stageChip.textContent = String(n);
 }
-function setPrice(v){ PRICE=v; priceEl.textContent=usd(v); updatedEl.textContent=nowHHMMSS(); }
+function setHealth(p){ // 0..1
+  HEALTH = clamp(p);
+  const pct = Math.round(HEALTH*100);
+  healthPct.textContent = pct + "%";
+  healthBar.style.width = pct + "%";
+}
+function setMutation(p){
+  MUT = clamp(p);
+  const pct = Math.round(MUT*100);
+  mutPct.textContent = pct + "%";
+  mutBar.style.width = pct + "%";
+  // traits grow with mutation over time
+  traitBars.biolume.v = clamp(traitBars.biolume.v + MUT*0.01);
+  traitBars.rings.v   = clamp(traitBars.rings.v   + MUT*0.012);
+  traitBars.sparks.v  = clamp(traitBars.sparks.v  + MUT*0.009);
+  renderTraits();
+}
+function setFlow(p){ // 0..1
+  FLOW = clamp(p);
+  flowBar.style.width = (FLOW*100) + "%";
+}
+function setPrice(n){
+  PRICE = n;
+  priceLabel.textContent = n.toFixed(2);
+  priceFoot.textContent = n.toFixed(2);
+}
+function tickClock(){
+  updatedLabel.textContent = nowHHMMSS();
+  clockEl.textContent = nowHHMMSS();
+}
 
-/********** Traits **********/
-const TRAITS = [
-  { key:'biolume', pct:0.12, label:'biolume' },
-  { key:'fronds',  pct:0.26, label:'fronds'  },
-  { key:'eyes',    pct:0.38, label:'eye-spots' },
-  { key:'echo',    pct:0.52, label:'echo-rings' }
-];
+/******** Traits render ********/
 function renderTraits(){
-  traitsRow.innerHTML='';
-  for(const tr of TRAITS){
-    if(MUT>=tr.pct){
-      const el=document.createElement('div');
-      el.className='badge';
-      el.innerHTML=`<span class="dot"></span><span>${tr.label}</span>`;
-      traitsRow.appendChild(el);
-    }
+  for (const k of Object.keys(traitBars)){
+    const { bar, pct, v } = traitBars[k];
+    const P = Math.round(v*100);
+    bar.style.width = P + "%";
+    pct.textContent = P + "%";
   }
 }
 
-/********** Trades (vertical 3 pills) **********/
-const trades=[]; // { t, type:'feed'|'starve', valueUsd, priceUsd }
-function pushTrade(type, valueUsd){
-  trades.push({ t: nowHHMMSS(), type, valueUsd, priceUsd: PRICE });
-  if(trades.length>60) trades.shift();
-  renderTrades();
-}
-function renderTrades(){
-  tradePills.innerHTML='';
-  trades.slice(-3).reverse().forEach(tr=>{
-    const el=document.createElement('div');
-    el.className='pill '+tr.type;
-    el.innerHTML=`
-      <span class="tag">${tr.type==='feed'?'Feed':'Starve'}</span>
-      <span class="v mono">${usd(tr.valueUsd)}</span>
-      <span class="t mono">${tr.t}</span>`;
-    tradePills.appendChild(el);
-  });
+/******** Evolution Log ********/
+const MAX_LOG = 16; // keeps it light; we’ll only *show* latest 8 by CSS height
+function pushLog(type, valueUsd){
+  const li = document.createElement("li");
+  const badge = document.createElement("span");
+  badge.className = "badge " + (type==="Feed" ? "feed" : "starve");
+  badge.textContent = type;
+
+  const val = document.createElement("span");
+  val.className="val";
+  val.textContent = fmtUSD(valueUsd);
+
+  const tt = document.createElement("span");
+  tt.className="t";
+  tt.textContent = nowHHMMSS();
+
+  li.appendChild(badge);
+  li.appendChild(val);
+  li.appendChild(tt);
+
+  logList.insertBefore(li, logList.firstChild);
+  while (logList.children.length > MAX_LOG) logList.removeChild(logList.lastChild);
 }
 
-/********** Audio (optional) **********/
-let AC=null,gain=null;
-function initAudio(){
-  if(AC) return;
-  AC = new (window.AudioContext||window.webkitAudioContext)();
-  const o=AC.createOscillator(), g1=AC.createGain(); o.type='sine'; o.frequency.value=58; g1.gain.value=.018; o.connect(g1);
-  const n=AC.createBufferSource(), buf=AC.createBuffer(1, AC.sampleRate*2, AC.sampleRate);
-  const ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*.11;
-  n.buffer=buf; n.loop=true; const g2=AC.createGain(); g2.gain.value=.028; n.connect(g2);
-  gain=AC.createGain(); gain.gain.value=0; g1.connect(gain); g2.connect(gain); gain.connect(AC.destination);
-  o.start(); n.start();
+/******** Sim / Pollers ********/
+/* If you want real endpoints later, set API_BASE and replace these with fetchers:
+
+   async function pollHealth() {
+     const r = await fetch(`${API_BASE}/health?mint=${TOKEN_MINT}`);
+     const j = await r.json(); setPrice(j.price); tickClock(); setHealth(j.health ?? HEALTH);
+   }
+   async function pollEvents() {
+     const r = await fetch(`${API_BASE}/trades?mint=${TOKEN_MINT}&limit=5`);
+     const items = await r.json();
+     items.forEach(x => pushLog(x.type, x.valueUsd));
+   }
+*/
+
+function simTick(){
+  // drift flow needle and health slowly to feel "alive"
+  const tgt = 0.55 + (FLOW-0.5)*0.2;
+  const nextH = HEALTH + (tgt-HEALTH)*0.04 + (Math.random()-.5)*0.01;
+  setHealth(clamp(nextH));
+
+  // mutation wanders gently
+  const nextM = MUT + (Math.random()-.5)*0.01;
+  setMutation(clamp(nextM,0,0.35));
 }
-sfxBtn.addEventListener('click',()=>{
-  if(!AC){ initAudio(); sfxBtn.classList.add('on'); gain.gain.linearRampToValueAtTime(.06, AC.currentTime+.35); }
-  else if(gain.gain.value>0){ gain.gain.linearRampToValueAtTime(0, AC.currentTime+.2); sfxBtn.classList.remove('on'); }
-  else { gain.gain.linearRampToValueAtTime(.06, AC.currentTime+.3); sfxBtn.classList.add('on'); }
+function simTrades(){
+  // ~every 12s, a small feed/starve
+  const isFeed = Math.random() > 0.5;
+  const usd = 5 + Math.random()*40;
+  pushLog(isFeed ? "Feed" : "Starve", usd);
+
+  // tiny nudge needle + health
+  const delta = (usd/1000) * (isFeed ? +1 : -1);
+  setFlow(clamp(FLOW + delta*2));
+  setHealth(clamp(HEALTH + delta*0.3));
+}
+
+/******** Wire buttons ********/
+feedBtn.addEventListener("click", (ev)=>{
+  ev.preventDefault();
+  pushLog("Feed", 12 + Math.random()*28);
+  setFlow(clamp(FLOW + 0.06));
+  setHealth(clamp(HEALTH + 0.02));
 });
 
-/********** Interactions **********/
-feedBtn.addEventListener('click', (e)=>{
-  e.preventDefault();
-  setFlow(clamp(FLOW+0.12));
-  setHealth(clamp(HEALTH+0.04));
-  pushTrade('feed', 15+Math.random()*35);
-});
-
-/********** Sim / Timers (replace with real API later) **********/
-function simTrade(){
-  const buy = Math.random()>.5;
-  setFlow(clamp(FLOW + (buy?+0.04:-0.04)));
-  setMutation(clamp(MUT + (Math.random()-.5)*0.01));
-  if(buy) setHealth(clamp(HEALTH + 0.01 + Math.random()*0.01));
-  else    setHealth(clamp(HEALTH - 0.008 - Math.random()*0.01));
-  pushTrade(buy?'feed':'starve', 8+Math.random()*28);
-}
-function simPrice(){ setPrice( 0.01 + Math.sin(Date.now()/5000)*0.002 ); }
-
-setInterval(simTrade, 7500);
-setInterval(simPrice, 6000);
-setInterval(()=>{ // drift to flow
-  const target=.55+(FLOW-.5)*.25;
-  setHealth(clamp(HEALTH+(target-HEALTH)*.035));
-}, 4000);
-
-/********** Boot **********/
+/******** Boot ********/
 function boot(){
   setStage(1);
   setHealth(HEALTH);
   setMutation(MUT);
   setFlow(0.5);
   setPrice(0.01);
+  tickClock();
   renderTraits();
-  renderTrades();
+
+  // link your swap if you want a prefilled CA
+  tradeBtn.href = `https://jup.ag/swap/SOL-${TOKEN_MINT}`;
+
+  setInterval(tickClock, 1_000);
+  setInterval(simTick, 4_000);
+  setInterval(simTrades, 12_000);
 }
 boot();
