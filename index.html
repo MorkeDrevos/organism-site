@@ -2,58 +2,87 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE ORGANISM — Live Habitat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="wrap">
-    
-    <!-- ===== Hero / Organism ===== -->
     <section class="panel hero">
       <div class="hero-head">
         <div class="eyebrow">THE ORGANISM</div>
         <div class="badge" id="stageBadge">Stage 1 · The Cell</div>
       </div>
+
       <h1 class="title">THE ORGANISM</h1>
       <p class="subtitle">
-        Status: <span id="status" class="ok">Alive</span> —
-        Heartbeat: <span id="heartbeat">Stable</span><br/>
-        <em>“Feed it or watch it die.”</em>
+        Status: <span id="status" class="ok">Alive</span> — Heartbeat: <span id="heartbeat">Stable</span>
+        — <em>“Feed it or watch it die.”</em>
       </p>
+
       <canvas id="org-canvas"></canvas>
+
       <div class="controls">
-        <a href="#" id="feedBtn" class="btn">⚡ FEED THE ORGANISM</a>
-        <a href="#" id="tradeBtn" class="btn" target="_blank">Open Swap</a>
-        <a href="#" id="sfxBtn" class="btn">🔇 SFX Off</a>
+        <a id="feedBtn" class="btn" href="#">⚡ FEED THE ORGANISM</a>
+        <a id="tradeBtn" class="btn" href="#" target="_blank" rel="noreferrer">Open Swap</a>
+        <a id="sfxBtn" class="btn" href="#">🔇 SFX Off</a>
       </div>
     </section>
 
-    <!-- ===== Status Panels ===== -->
-    <section class="panel-grid">
+    <section class="panel panel-grid">
       <!-- Vitals -->
       <div class="box">
         <h3 class="h">Vitals</h3>
-        <div class="kv"><div class="label">Health</div>
-          <div class="value bar"><div id="health-bar"></div></div></div>
-        <div class="kv"><div class="label">Mutation Progress</div>
-          <div class="value bar"><div id="mut-bar"></div></div></div>
-        <div class="kv"><div class="label">Decay</div>
-          <div class="value" id="decayRate">1% / 10m</div></div>
-        <div class="kv"><div class="label">Stage</div>
-          <div class="value" id="stageNum">1</div></div>
-        <div class="kv"><div class="label">Price</div>
-          <div class="value" id="priceLabel">$—</div></div>
-        <div class="kv"><div class="label">Updated</div>
-          <div class="value" id="updatedLabel">--:--:--</div></div>
-        <div class="kv"><div class="label">Net Flow (5m)</div>
-          <div class="value bar flow"><div id="flow-bar"></div></div></div>
-        <div class="muted center" id="flowLabel">Neutral</div>
+
+        <div class="kv">
+          <div class="label">Health</div>
+          <div class="value">
+            <div class="bar"><div id="health-bar"></div></div>
+          </div>
+        </div>
+
+        <div class="kv">
+          <div class="label">Mutation Progress</div>
+          <div class="value">
+            <div class="bar"><div id="mut-bar"></div></div>
+          </div>
+        </div>
+
+        <div class="kv">
+          <div class="label">Decay</div>
+          <div class="value"><span id="decayRate">1% / 10m</span></div>
+        </div>
+
+        <div class="kv">
+          <div class="label">Stage</div>
+          <div class="value"><span id="stageNum">1</span></div>
+        </div>
+
+        <div class="kv">
+          <div class="label">Price</div>
+          <div class="value"><span id="priceLabel">$—</span></div>
+        </div>
+
+        <div class="kv">
+          <div class="label">Updated</div>
+          <div class="value"><span id="updatedLabel">—:—:—</span></div>
+        </div>
+
+        <div class="kv">
+          <div class="label">Net Flow (5m)</div>
+          <div class="value">
+            <div class="bar flow">
+              <div id="flow-bar"></div>
+            </div>
+            <div class="center muted" id="flowLabel">Neutral</div>
+          </div>
+        </div>
       </div>
 
       <!-- Trades -->
       <div class="box">
         <h3 class="h">Trades — Feeding / Starving</h3>
+
         <table class="table">
           <thead>
             <tr>
@@ -70,10 +99,10 @@
       </div>
     </section>
 
-    <!-- ===== Archive ===== -->
+    <!-- Lore / whispers -->
     <section class="panel">
       <h3 class="h">Mutation Archive</h3>
-      <ol class="archive">
+      <ol class="archive" id="archive">
         <li><strong>Stage 1: The Cell</strong> — Born weak, fragile, dependent on constant feeding.</li>
       </ol>
     </section>
@@ -83,7 +112,9 @@
     </footer>
   </main>
 
-  <!-- App logic -->
+  <!-- Soft “whisper” overlay (mystery) -->
+  <div id="whispers" aria-hidden="true"></div>
+
   <script src="app.js"></script>
 </body>
 </html>
