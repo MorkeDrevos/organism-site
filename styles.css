@@ -1,9 +1,7 @@
 /* -------------------------------------------------------
-   THE ORGANISM — Friendly / Polished Theme
-   Drop-in replacement for styles.css
+   THE ORGANISM — Friendly / Polished + Mystery
 -------------------------------------------------------- */
 
-/* ===== CSS Reset (tiny) ===== */
 *,
 *::before,
 *::after { box-sizing: border-box; }
@@ -11,9 +9,8 @@ html, body { height: 100%; }
 body { margin: 0; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 img, canvas, svg { display: block; max-width: 100%; }
 
-/* ===== Theme Vars ===== */
 :root{
-  --bg-0: hsl(213 37% 10%);     /* base */
+  --bg-0: hsl(213 37% 10%);
   --bg-1: hsl(213 36% 12% / .85);
   --bg-2: hsl(213 34% 16% / .75);
 
@@ -25,8 +22,8 @@ img, canvas, svg { display: block; max-width: 100%; }
   --text-dim: hsl(210 15% 75%);
   --muted: hsl(210 12% 62%);
 
-  --accent: hsl(175 80% 60%);   /* calm teal */
-  --accent-2: hsl(225 80% 70%); /* indigo for hover */
+  --accent: hsl(175 80% 60%);
+  --accent-2: hsl(225 80% 70%);
   --good: hsl(150 65% 55%);
   --bad:  hsl(5 78% 64%);
   --warn: hsl(40 90% 60%);
@@ -45,7 +42,7 @@ img, canvas, svg { display: block; max-width: 100%; }
   --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 }
 
-/* ===== Page Background (animated gradient + soft grid) ===== */
+/* Background + subtle grid */
 body {
   font-family: var(--sans);
   color: var(--text);
@@ -56,9 +53,7 @@ body {
   background-attachment: fixed;
   overflow-x: hidden;
 }
-
 body::before{
-  /* faint grid */
   content:"";
   position: fixed; inset: 0;
   background:
@@ -68,8 +63,6 @@ body::before{
   mask-image: radial-gradient(70% 70% at 50% 30%, black 60%, transparent 100%);
   pointer-events: none;
 }
-
-/* subtle background drift */
 @media (prefers-reduced-motion: no-preference){
   body{ animation:bg-drift 20s linear infinite alternate; }
   @keyframes bg-drift{
@@ -78,12 +71,12 @@ body::before{
   }
 }
 
-/* ===== Layout ===== */
 .wrap{
   width: min(1200px, 92vw);
   margin: 40px auto 80px;
 }
 
+/* Cards */
 .panel{
   background: var(--card);
   border: 1px solid var(--card-border);
@@ -92,41 +85,24 @@ body::before{
   padding: clamp(16px, 2.6vw, 28px);
   backdrop-filter: blur(6px) saturate(110%);
 }
-
 .panel + .panel { margin-top: 18px; }
 
-/* Hero */
-.hero{
-  position: relative;
-  overflow: hidden;
-  padding-bottom: 28px;
-}
-
+.hero{ position: relative; overflow: hidden; padding-bottom: 28px; }
 .hero-head{
   display:flex; align-items:center; justify-content:space-between;
   gap: 12px; margin-bottom: 8px;
 }
-.eyebrow{
-  letter-spacing:.2em; text-transform:uppercase;
-  color: var(--text-dim); font-size:.82rem;
-}
+.eyebrow{ letter-spacing:.2em; text-transform:uppercase; color: var(--text-dim); font-size:.82rem; }
 .badge{
   color: var(--accent); background: hsl(175 90% 40% / .12);
   border: 1px solid hsl(175 80% 45% / .35);
-  padding: 6px 10px; border-radius: 999px; font-weight: 600;
-  font-size:.82rem;
+  padding: 6px 10px; border-radius: 999px; font-weight: 600; font-size:.82rem;
 }
-
-.title{
-  margin: 6px 0 4px;
-  font-size: clamp(28px, 4.6vw, 40px);
-  letter-spacing: .02em;
-}
-
+.title{ margin: 6px 0 4px; font-size: clamp(28px, 4.6vw, 40px); letter-spacing: .02em; }
 .subtitle{ color: var(--text-dim); margin: 0 0 16px; }
 .subtitle em{ color: var(--muted); }
 
-/* Canvas organism */
+/* Canvas */
 #org-canvas{
   width: 100%;
   aspect-ratio: 16/9;
@@ -135,16 +111,11 @@ body::before{
     radial-gradient(70% 70% at 50% 45%, var(--ring-outer), transparent 70%);
   border-radius: calc(var(--radius) - 6px);
   border: 1px solid hsl(170 100% 70% / .12);
-  box-shadow:
-    inset 0 0 80px hsl(170 90% 60% / .15),
-    0 30px 60px hsl(210 60% 6% / .35);
+  box-shadow: inset 0 0 80px hsl(170 90% 60% / .15), 0 30px 60px hsl(210 60% 6% / .35);
 }
 
-/* Controls */
-.controls{
-  display:flex; flex-wrap: wrap; gap:10px;
-  margin-top: 16px;
-}
+/* Buttons */
+.controls{ display:flex; flex-wrap: wrap; gap:10px; margin-top: 16px; }
 .btn{
   --b: hsl(210 70% 70% / .25);
   display:inline-flex; align-items:center; gap:.6ch;
@@ -158,16 +129,10 @@ body::before{
 .btn:hover{ transform: translateY(-1px); border-color: hsl(210 80% 80% / .35); background: linear-gradient(180deg, hsl(213 50% 18% / .7), hsl(213 42% 14% / .7)); }
 .btn:active{ transform: translateY(0); }
 
-/* ===== Two-column grid for Vitals + Trades ===== */
-.panel-grid{
-  display:grid; gap: 18px;
-  grid-template-columns: 1fr;
-}
-@media (min-width: 920px){
-  .panel-grid{ grid-template-columns: 1fr 1fr; }
-}
+/* Grid for vitals/trades */
+.panel-grid{ display:grid; gap: 18px; grid-template-columns: 1fr; }
+@media (min-width: 920px){ .panel-grid{ grid-template-columns: 1fr 1fr; } }
 
-/* Card box */
 .box{
   background: var(--bg-1);
   border: 1px solid var(--card-border);
@@ -175,93 +140,67 @@ body::before{
   padding: var(--pad-lg);
   box-shadow: inset 0 1px 0 hsl(0 0% 100% / .02);
 }
-.h{
-  margin: 0 0 14px;
-  font-size: 1.05rem;
-  letter-spacing: .02em;
-  color: var(--text);
-}
+.h{ margin: 0 0 14px; font-size: 1.05rem; letter-spacing: .02em; color: var(--text); }
 
-/* Key-value rows */
-.kv{
-  display:grid; grid-template-columns: 160px 1fr; align-items:center;
-  gap: 12px; padding: 8px 0;
-  border-bottom: 1px dashed hsl(210 60% 70% / .12);
-}
+/* key-value rows */
+.kv{ display:grid; grid-template-columns: 160px 1fr; align-items:center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed hsl(210 60% 70% / .12); }
 .kv:last-child{ border-bottom: 0; }
 .kv .label{ color: var(--text-dim); }
 .kv .value{ color: var(--text); }
 
-/* Bars */
-.bar{ position: relative; height: 10px; border-radius: 999px;
-  background: hsl(215 25% 22% / .6); overflow: hidden;
-  outline: 1px solid hsl(210 70% 80% / .12);
-}
-.bar > div{ height:100%; width: 0%;
-  background: linear-gradient(90deg, hsl(160 70% 56%), hsl(173 70% 56%));
-  border-radius: 999px; transition: width .6s cubic-bezier(.22,.61,.36,1);
-}
+/* bars */
+.bar{ position: relative; height: 10px; border-radius: 999px; background: hsl(215 25% 22% / .6); overflow: hidden; outline: 1px solid hsl(210 70% 80% / .12); }
+.bar > div{ height:100%; width: 0%; background: linear-gradient(90deg, hsl(160 70% 56%), hsl(173 70% 56%)); border-radius: 999px; transition: width .6s cubic-bezier(.22,.61,.36,1); }
 
-/* Flow bar has center-zero */
 .bar.flow{ background: linear-gradient(90deg,
     hsl(350 70% 55% / .18) 0 50%,
     hsl(215 25% 22% / .6) 50% 50%,
     hsl(150 70% 55% / .18) 50% 100%);
-  position: relative;
-}
-.bar.flow::before{
-  content:""; position:absolute; top:-3px; left:50%; width:2px; bottom:-3px;
-  background:hsl(0 0% 100% / .06);
-}
-#flow-bar{
-  position:absolute; height:100%;
-  left: 50%; width: 0%;
-  background: linear-gradient(90deg, var(--bad), var(--good));
-  transform-origin: left center;
-  box-shadow: 0 0 12px hsl(170 90% 55% / .25);
-}
+  position: relative; }
+.bar.flow::before{ content:""; position:absolute; top:-3px; left:50%; width:2px; bottom:-3px; background:hsl(0 0% 100% / .06); }
+#flow-bar{ position:absolute; height:100%; left: 50%; width: 0%; background: linear-gradient(90deg, var(--bad), var(--good)); transform-origin: left center; box-shadow: 0 0 12px hsl(170 90% 55% / .25); }
 
-/* Helpers under flow */
 .center{ text-align:center; }
 .muted{ color: var(--muted); }
 .sub{ color: var(--text-dim); font-size: .85em; }
 
-/* ===== Table ===== */
-.table{
-  width:100%; border-collapse: separate; border-spacing:0 10px;
-}
-.table thead th{
-  text-align:left; font-weight:600; color: var(--text-dim); padding: 0 10px 4px;
-}
+/* table */
+.table{ width:100%; border-collapse: separate; border-spacing:0 10px; }
+.table thead th{ text-align:left; font-weight:600; color: var(--text-dim); padding: 0 10px 4px; }
 .table tbody tr{
   background: var(--bg-2);
   border: 1px solid var(--card-border);
   box-shadow: 0 6px 18px hsl(213 40% 6% / .30), inset 0 1px 0 hsl(0 0% 100% / .02);
   border-radius: var(--radius-sm);
-  overflow:hidden;
-  transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
+  overflow:hidden; transition: transform .12s ease, box-shadow .2s ease, background .2s ease;
 }
-.table tbody tr:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 10px 26px hsl(213 40% 6% / .36);
-}
-.table td{
-  padding: 14px 16px;
-  border-bottom: 0;
-}
+.table tbody tr:hover{ transform: translateY(-1px); box-shadow: 0 10px 26px hsl(213 40% 6% / .36); }
+.table td{ padding: 14px 16px; border-bottom: 0; }
 .table td.right{ text-align:right; }
-
 .buy{ color: var(--good); font-weight: 700; letter-spacing:.02em; }
 .sell{ color: var(--bad); font-weight: 700; letter-spacing:.02em; }
 
-/* ===== Footer ===== */
-.foot{
-  margin-top: 18px;
-  color: var(--muted);
-  font-size: .9rem;
+/* footer */
+.foot{ margin-top: 18px; color: var(--muted); font-size: .9rem; }
+
+/* whispers overlay */
+#whispers{
+  position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: .0; transition: opacity .6s ease;
+  background:
+    radial-gradient(1000px 600px at 40% 10%, transparent, hsl(210 40% 8% / .15) 70%, transparent 80%),
+    radial-gradient(1200px 700px at 70% 100%, transparent, hsl(185 40% 10% / .15) 70%, transparent 80%);
+  mix-blend-mode: screen;
+}
+#whispers.show{ opacity: .6; }
+#whispers::after{
+  content: attr(data-line);
+  position: absolute; left: 8%; bottom: 10%;
+  color: hsl(165 100% 75% / .7);
+  font-size: clamp(18px, 2.6vw, 28px);
+  letter-spacing: .05em;
+  text-shadow: 0 0 22px hsl(165 100% 60% / .45);
 }
 
-/* ===== Accessibility ===== */
 @media (prefers-reduced-motion: reduce){
   *{ animation: none !important; transition: none !important; }
 }
