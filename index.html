@@ -23,7 +23,6 @@
         <span>•</span>
         <span>Heartbeat: <span id="heartbeat">Stable</span></span>
       </div>
-
       <div class="controls">
         <button id="feedBtn" class="btn">⚡ Feed</button>
         <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
@@ -37,7 +36,6 @@
         <span>•</span>
         <span>Updated <span id="updatedLabel">—:—:—</span></span>
       </div>
-
       <div class="flowline">
         <div class="flow"><span id="flowBar"></span></div>
         <span id="flowLabel" class="muted">Neutral</span>
@@ -45,9 +43,9 @@
     </div>
   </header>
 
-  <!-- ===== Bottom dock: Vitals + Trades ===== -->
+  <!-- ===== Bottom dock ===== -->
   <footer class="dock">
-    <!-- Vitals card -->
+    <!-- Vitals -->
     <section class="card vitals">
       <div class="card-head">
         <h3>Vitals</h3>
@@ -56,13 +54,13 @@
 
       <div class="kv">
         <div class="label">Health</div>
-        <div class="bar"><span id="healthBar" style="width:0%"></span></div>
+        <div class="bar thin"><span id="healthBar" style="width:0%"></span></div>
         <div class="value" id="healthPct">0%</div>
       </div>
 
       <div class="kv">
         <div class="label">Mutation</div>
-        <div class="bar"><span id="mutBar" style="width:0%"></span></div>
+        <div class="bar thin"><span id="mutBar" style="width:0%"></span></div>
         <div class="value" id="mutPct">0%</div>
       </div>
 
@@ -72,7 +70,7 @@
       </div>
     </section>
 
-    <!-- Feeding / Starving (clean list, no gridlines) -->
+    <!-- Trades (clean list) -->
     <section class="card trades">
       <div class="card-head">
         <h3>Feeding / Starving</h3>
@@ -86,6 +84,10 @@
         <div>Price (USD)</div>
       </div>
       <ul id="trades-list" class="list"></ul>
+
+      <div class="list-controls">
+        <button id="moreBtn" class="btn ghost small">Show more</button>
+      </div>
     </section>
   </footer>
 
