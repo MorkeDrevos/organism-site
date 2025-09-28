@@ -140,3 +140,38 @@ body.theme-void{ background:var(--bg); color:var(--ink); }
   .stack{ right:10px; left:10px; width:auto; top:auto; bottom:86px; }
   .thead, .toast{ grid-template-columns: 56px 64px 1fr 1fr; }
 }
+
+/* ===== Ring HUD ===== */
+.ring-hud{
+  position:fixed; inset:0; display:grid; place-items:center; z-index:2;
+  grid-template-columns: 240px 380px 240px; gap:28px; pointer-events:none;
+}
+.gauge{ display:grid; gap:8px; justify-items:center }
+.gauge .label{ font-size:13px; color:var(--muted) }
+.gauge .label span{ color:var(--ink) }
+
+/* Rings with strong glow */
+.gauge .ring{
+  --val:0; /* degrees 0..360 */
+  width:220px; height:220px; border-radius:50%;
+  background:
+    conic-gradient(var(--ringColor) calc(var(--val)*1deg), rgba(0,0,0,0) 0),
+    radial-gradient(closest-side, #050607 75%, transparent 80%);
+  box-shadow: inset 0 0 8px #000,
+              0 0 25px var(--ringColor),
+              0 0 55px var(--ringColor);
+  position:relative;
+}
+.gauge.health .ring{ --ringColor: var(--aquaA); }
+.gauge.mut .ring{ --ringColor: var(--magA); }
+
+/* Nucleus card contrast */
+.nucleus{
+  width:100%; max-width:380px; pointer-events:auto;
+  background:rgba(10,14,22,0.85); border:1px solid var(--edge);
+  border-radius:18px; padding:14px;
+  box-shadow:0 12px 34px rgba(0,0,0,.7);
+  backdrop-filter: blur(14px);
+  color:var(--ink);
+}
+.nucleus .title{ font-size:14px; font-weight:600; margin-bottom:8px; }
