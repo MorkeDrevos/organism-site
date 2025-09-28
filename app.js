@@ -1,218 +1,193 @@
-// THE ORGANISM — Frontend logic (full file)
-// - Pulls live data from backend /health
-// - Smoothly maps price -> visual "health"
-// - Handles retries + shows warnings if backend is unreachable
-
 (() => {
   const cfg = window.__CONFIG__ || {};
   const API = cfg.apiBase || "";
 
-  // ---------- DOM ----------
-  const canvas = document.getElementById('organismCanvas');
-  const ctx = canvas.getContext('2d');
+  // DOM
+  const canvas = document.getElementById("org-canvas");
+  const ctx = canvas.getContext("2d");
+  const orgWrap = document.querySelector(".organism-wrap");
 
-  const feedBtn = document.getElementById('feedBtn');
-  const tradeBtn = document.getElementById('tradeBtn');
-  const sfxBtn = document.getElementById('sfxBtn');
+  const statusWord = document.getElementById("status-word");
+  const priceEl = document.getElementById("price");
+  const updatedEl = document.getElementById("updated");
+  const healthBar = document.getElementById("health-bar");
+  const mutBar = document.getElementById("mut-bar");
+  const decayRate = document.getElementById("decay-rate");
+  const flowMeter = document.getElementById("flow-meter");
+  const flowLabel = document.getElementById("flow-label");
+  const tradesEl = document.getElementById("trades");
+  const tradeBtn = document.getElementById("trade-btn");
+  const feedBtn = document.getElementById("feed-btn");
+  const sfxBtn = document.getElementById("sfx-btn");
 
-  const statusWord = document.getElementById('statusWord');
-  const heartbeatRate = document.getElementById('heartbeatRate');
+  // link your swap (can be Jupiter/Pump link):
+  tradeBtn.href = "https://jup.ag/swap/SOL-NATIVE/USDC"; // placeholder, change on launch
 
-  const healthBar = document.getElementById('healthBar');
-  const mutBar = document.getElementById('mutBar');
-  const healthPct = document.getElementById('healthPct');
-  const mutPct = document.getElementById('mutPct');
+  // State
+  let health = 0.65;          // 0..1
+  let targetHealth = 0.65;
+  let mutation = 0.0;         // 0..1
+  let lastPrice = 0;
+  let lastHealthTs = 0;
 
-  const stageLabel = document.getElementById('stageLabel');
-  const stageBadge = document.getElementById('stageBadge');
-
-  const decayRate = document.getElementById('decayRate');
-  const priceLabel = document.getElementById('priceLabel');
-  const updatedLabel = document.getElementById('updatedLabel');
-
-  const alertBox = document.getElementById('alert');
-  const feedLog = document.getElementById('feedLog');
-  const orgWrap = document.querySelector('.organism-wrap');
-  const hero = document.querySelector('.hero');
-
-  if (cfg.jupiterUrl) tradeBtn.href = cfg.jupiterUrl;
-
-  // ---------- State ----------
-  let t = 0;                 // animation clock (ms)
-  let stage = 1;
-  let health = 35;           // displayed 0..100
-  let mutation = 0;          // displayed 0..100
-  let sfx = false;
-
-  // smoothing
-  let targetHealth = 35;     // where we want health to move toward
-  const EASE = 0.18;         // easing factor each tick
-  const POLL_MS = 5000;      // backend poll
-  let failCount = 0;
-
-  // ---------- Helpers ----------
-  const clamp01 = (x) => Math.max(0, Math.min(1, x));
-  function setAlert(text, level) {
-    if (!text) { alertBox.className='alert hidden'; alertBox.textContent=''; return; }
-    alertBox.textContent = text;
-    alertBox.className = 'alert ' + (level || '');
+  // Simple drawing of the pulsing core (kept minimal here)
+  function draw(t) {
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const radius = 46 + Math.sin(t/500) * 10 + health * 40;
+    const grad = ctx.createRadialGradient(w/2,h/2, 4, w/2,h/2, radius);
+    grad.addColorStop(0, "rgba(126,224,255,.9)");
+    grad.addColorStop(1, "rgba(126,224,255,0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, radius, 0, Math.PI*2);
+    ctx.fill();
+    requestAnimationFrame(draw);
   }
-  function log(msg) {
-    const li = document.createElement('li');
-    li.textContent = msg;
-    feedLog.prepend(li);
-    while (feedLog.children.length > 40) feedLog.removeChild(feedLog.lastChild);
-  }
-  function fmtUsd(n){
-    if (n === null || n === undefined) return '--';
-    const num = Number(n);
-    if (!isFinite(num)) return '--';
-    if (num >= 1) return '$' + num.toFixed(4);
-    if (num >= 0.01) return '$' + num.toFixed(6);
-    return '$' + num.toPrecision(2);
+  requestAnimationFrame(draw);
+
+  function fmtUSD(v) { return v ? `$${Number(v).toFixed(4)}` : "$—"; }
+  function setHealth(val) {
+    health = Math.max(0, Math.min(1, val));
+    healthBar.style.width = `${Math.round(health*100)}%`;
   }
 
-  // Map price -> [0..100] health with gentle curvature:
-  // - Very low prices keep health low but non-zero
-  // - Higher prices asymptotically approach 100
-  function priceToHealth(price) {
-    // Normalize: choose a “reference” price band for your token
-    // so typical values land around 40–70% health.
-    // You can tune REF and GAIN after you see live behavior.
-    const REF = 0.01;     // ~1 cent as pivot for this test token
-    const GAIN = 85;      // max health contribution from price
-    const x = Math.max(0, price / REF);    // normalized price
-    // smooth curve (logistic-like using arctan):
-    const curve = Math.atan(x) / (Math.PI/2); // 0..1
-    const h = 5 + curve * GAIN;               // reserve 5% floor
-    return Math.max(5, Math.min(100, h));
+  // Health model: price → targetHealth; decay over time; trades nudge it.
+  const DECAY_PER_10M = 0.01;  // 1% every 10 minutes
+  decayRate.textContent = "1% / 10m";
+  function tickDecay() {
+    const now = Date.now();
+    if (!lastHealthTs) { lastHealthTs = now; return; }
+    const dt = (now - lastHealthTs) / 1000; // seconds
+    const decayPerSec = (DECAY_PER_10M / (10*60));
+    setHealth(health * (1 - decayPerSec * dt));
+    lastHealthTs = now;
+
+    // drift health smoothly toward target
+    const k = 0.08;
+    setHealth(health + (targetHealth - health) * k);
   }
 
-  // ---------- Drawing ----------
-  function redraw() {
-    ctx.clearRect(0,0,canvas.width, canvas.height);
-    const cx = canvas.width/2;
-    const cy = canvas.height/2 + 10;
-
-    // Base pulse driven by time + health
-    const beat = (Math.sin(t/420) + 1)/2; // 0..1
-    const healthFactor = clamp01(health/100);
-    const radius = 78 + beat*26*healthFactor + stage*3;
-
-    const grd = ctx.createRadialGradient(cx, cy, radius*0.2, cx, cy, radius);
-    grd.addColorStop(0, 'rgba(120,255,210,0.95)');
-    grd.addColorStop(1, 'rgba(20,40,60,0)');
-    ctx.fillStyle = grd;
-    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.fill();
-
-    // filaments
-    ctx.strokeStyle = 'rgba(140,210,255,0.25)';
-    for (let i=0;i<stage*8;i++){
-      const ang = (i/stage)*Math.PI/4 + t/3000 + i*0.13;
-      const len = radius + 24 + (Math.sin(t/900+i)*12);
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.lineTo(cx + Math.cos(ang)*len, cy + Math.sin(ang)*len);
-      ctx.stroke();
-    }
-  }
-
-  // ---------- UI sync ----------
-  function applyUI(alerts=[]) {
-    // ease health toward target
-    health += (targetHealth - health) * EASE;
-
-    // mutation creeps (faster if health is high)
-    mutation = Math.min(100, mutation + (0.05 + 0.35*clamp01(health/100)));
-
-    healthBar.style.width = Math.max(0, Math.min(100, health)) + '%';
-    healthPct.textContent = Math.round(Math.max(0, health)) + '%';
-    mutBar.style.width = Math.max(0, Math.min(100, mutation)) + '%';
-    mutPct.textContent = Math.round(Math.max(0, mutation)) + '%';
-
-    // status labels
-    if (health <= 0.5) {
-      statusWord.textContent = 'Dead';
-      statusWord.classList.remove('alive'); statusWord.classList.add('dead');
-      heartbeatRate.textContent = 'Flatline';
-    } else if (health < 10) {
-      statusWord.textContent = 'Dying';
-      statusWord.classList.remove('alive'); statusWord.classList.remove('dead');
-      heartbeatRate.textContent = 'Faint';
-    } else if (health < 30) {
-      statusWord.textContent = 'Weak';
-      statusWord.classList.remove('alive'); statusWord.classList.remove('dead');
-      heartbeatRate.textContent = 'Weak';
-    } else {
-      statusWord.textContent = 'Alive';
-      statusWord.classList.add('alive'); statusWord.classList.remove('dead');
-      heartbeatRate.textContent = 'Stable';
-    }
-
-    // alerts
-    if (alerts.length) {
-      const text = alerts[0];
-      const level = text.startsWith('COLLAPSE') ? 'crit'
-                   : text.includes('Critical') ? 'crit'
-                   : text.includes('Starvation') ? 'warn' : '';
-      setAlert(text, level);
-    } else if (failCount === 0) {
-      setAlert('', '');
-    }
-
-    // vibe effect
-    if (health > 0 && health < 12) hero.classList.add('shake'); else hero.classList.remove('shake');
-  }
-
-  // ---------- Backend polling ----------
-  async function pollBackend() {
-    if (!API) return;
-
+  // Fetch price → map to target health via soft clamp
+  async function pollHealth() {
     try {
-      const r = await fetch(`${API}/health`, { cache: 'no-store' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const s = await r.json();
+      const r = await fetch(`${API}/health`);
+      const j = await r.json();
+      lastPrice = j.price || 0;
+      priceEl.textContent = fmtUSD(lastPrice);
+      updatedEl.textContent = new Date(j.timestamp).toLocaleTimeString();
 
-      // update price/time display
-      const price = Number(s.price || 0);
-      priceLabel.textContent = fmtUsd(price);
-      updatedLabel.textContent = new Date(s.timestamp || Date.now()).toLocaleTimeString();
-
-      // compute a new target health from price
-      targetHealth = priceToHealth(price);
-
-      // reset warning on success
-      failCount = 0;
-
+      // map price to a [0.2..0.95] band relative to 24h micro-range
+      // For now, simple: higher price => higher target
+      const mapped = Math.max(0.2, Math.min(0.95, 0.4 + Math.log10(1 + lastPrice*120)));
+      targetHealth = mapped;
+      statusWord.textContent = "Alive";
+      statusWord.classList.add("accent");
     } catch (e) {
-      failCount++;
-      // Exponential-ish backoff messaging
-      if (failCount === 1) setAlert('Backend unreachable. Showing local animation only.', 'warn');
-      if (failCount > 6) setAlert('Backend still offline. Retrying…', 'warn');
-    } finally {
-      setTimeout(pollBackend, POLL_MS);
+      statusWord.textContent = "Offline";
+      statusWord.classList.remove("accent");
     }
   }
 
-  // ---------- Interactions ----------
-  sfxBtn.addEventListener('click', () => {
-    sfx = !sfx;
-    sfxBtn.textContent = sfx ? '🔊 SFX On' : '🔈 SFX Off';
-    sfxBtn.setAttribute('aria-pressed', String(sfx));
+  // Poll trades → update tape, flow, and nudge health with micro pulses
+  const FLOW_WINDOW_MS = 5*60*1000;
+  function renderTrades(rows) {
+    tradesEl.innerHTML = "";
+    const now = Date.now();
+    let net = 0;
+
+    rows.slice(0, 12).forEach((t) => {
+      const li = document.createElement("div");
+      li.className = "trade";
+      const side = document.createElement("span");
+      side.className = "side " + (t.side === "sell" ? "sell" : "buy");
+      side.textContent = t.side === "sell" ? "SELL" : "BUY";
+
+      const price = document.createElement("span");
+      price.className = "price";
+      price.textContent = fmtUSD(t.price);
+
+      const amt = document.createElement("span");
+      amt.className = "amount";
+      amt.textContent = `${Number(t.amount).toLocaleString()} tokens`;
+
+      const time = document.createElement("span");
+      time.className = "time";
+      time.textContent = new Date(t.ts).toLocaleTimeString();
+
+      li.appendChild(side);
+      li.appendChild(price);
+      li.appendChild(amt);
+      li.appendChild(time);
+      tradesEl.appendChild(li);
+
+      // Flow calc (recent trades only)
+      if (now - t.ts < FLOW_WINDOW_MS) {
+        const usd = t.price * t.amount;
+        net += (t.side === "sell" ? -usd : usd);
+      }
+    });
+
+    // Flow meter visual (centered -> 0, left = starving, right = feeding)
+    // Map net USD to width %, soft clamp
+    const intensity = Math.max(-1, Math.min(1, net / 2000)); // scale
+    const pct = Math.abs(intensity) * 50; // 0..50% from center
+    flowMeter.style.width = `${pct}%`;
+    flowMeter.style.left = "50%";
+    flowMeter.style.transform = "translateX(-50%)";
+    flowMeter.style.background = intensity >= 0
+      ? "linear-gradient(90deg, transparent, rgba(50,213,131,.7))"
+      : "linear-gradient(270deg, transparent, rgba(255,107,107,.7))";
+    flowLabel.textContent = intensity > 0.08 ? "Feeding" : (intensity < -0.08 ? "Starving" : "Neutral");
+
+    // Organism pulse on strong bias
+    if (intensity > 0.12) {
+      orgWrap.classList.remove("starve");
+      void orgWrap.offsetWidth; // reflow to retrigger
+      orgWrap.classList.add("feed");
+      // micro health nudge
+      setHealth(health + 0.01 * Math.min(1, intensity));
+    } else if (intensity < -0.12) {
+      orgWrap.classList.remove("feed");
+      void orgWrap.offsetWidth;
+      orgWrap.classList.add("starve");
+      setHealth(health - 0.01 * Math.min(1, -intensity));
+    } else {
+      orgWrap.classList.remove("feed", "starve");
+    }
+  }
+
+  async function pollTrades() {
+    try {
+      const r = await fetch(`${API}/trades`);
+      const j = await r.json();
+      renderTrades(j.trades || []);
+    } catch (e) {
+      // leave previous tape; no crash
+    }
+  }
+
+  // Manual "feed" tap – only visual for now
+  feedBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    setHealth(health + 0.02);
+    orgWrap.classList.remove("starve");
+    void orgWrap.offsetWidth;
+    orgWrap.classList.add("feed");
+    setTimeout(() => orgWrap.classList.remove("feed"), 900);
   });
 
-  feedBtn.addEventListener('click', (ev) => {
-    ev.preventDefault();
-    // micro “pulse”
-    orgWrap.style.transform = 'scale(1.02)';
-    setTimeout(()=> orgWrap.style.transform = 'scale(1.0)', 120);
-    // little health nudge so it feels responsive
-    targetHealth = Math.min(100, targetHealth + 2);
-    log('Manual feed trigger (demo).');
+  sfxBtn.addEventListener("click", () => {
+    cfg.sfx = !cfg.sfx;
+    sfxBtn.textContent = cfg.sfx ? "🔊 SFX On" : "🔇 SFX Off";
   });
 
-  // ---------- Tickers ----------
-  setInterval(() => { t += 50; redraw(); applyUI([]); }, 50);
-  decayRate.textContent = '1% / 10m';
-  pollBackend();
+  // Schedulers
+  setInterval(tickDecay, 1000);
+  setInterval(pollHealth, 5_000);
+  setInterval(pollTrades, 6_000);
+
+  // Boot
+  pollHealth();
+  pollTrades();
 })();
