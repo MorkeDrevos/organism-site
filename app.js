@@ -1,25 +1,31 @@
-// Frontend: renders a pulsing organism and syncs with backend /health.
-// If backend is unreachable, it keeps animating and shows a warning.
+// THE ORGANISM — Frontend logic (full file)
+// - Pulls live data from backend /health
+// - Smoothly maps price -> visual "health"
+// - Handles retries + shows warnings if backend is unreachable
 
 (() => {
   const cfg = window.__CONFIG__ || {};
   const API = cfg.apiBase || "";
 
-  // DOM
+  // ---------- DOM ----------
   const canvas = document.getElementById('organismCanvas');
   const ctx = canvas.getContext('2d');
+
   const feedBtn = document.getElementById('feedBtn');
   const tradeBtn = document.getElementById('tradeBtn');
   const sfxBtn = document.getElementById('sfxBtn');
 
   const statusWord = document.getElementById('statusWord');
   const heartbeatRate = document.getElementById('heartbeatRate');
+
   const healthBar = document.getElementById('healthBar');
   const mutBar = document.getElementById('mutBar');
   const healthPct = document.getElementById('healthPct');
   const mutPct = document.getElementById('mutPct');
+
   const stageLabel = document.getElementById('stageLabel');
   const stageBadge = document.getElementById('stageBadge');
+
   const decayRate = document.getElementById('decayRate');
   const priceLabel = document.getElementById('priceLabel');
   const updatedLabel = document.getElementById('updatedLabel');
@@ -31,9 +37,21 @@
 
   if (cfg.jupiterUrl) tradeBtn.href = cfg.jupiterUrl;
 
-  // animation state
-  let t = 0, stage = 1, health = 100, mutation = 0, alive = true, sfx = false;
+  // ---------- State ----------
+  let t = 0;                 // animation clock (ms)
+  let stage = 1;
+  let health = 35;           // displayed 0..100
+  let mutation = 0;          // displayed 0..100
+  let sfx = false;
 
+  // smoothing
+  let targetHealth = 35;     // where we want health to move toward
+  const EASE = 0.18;         // easing factor each tick
+  const POLL_MS = 5000;      // backend poll
+  let failCount = 0;
+
+  // ---------- Helpers ----------
+  const clamp01 = (x) => Math.max(0, Math.min(1, x));
   function setAlert(text, level) {
     if (!text) { alertBox.className='alert hidden'; alertBox.textContent=''; return; }
     alertBox.textContent = text;
@@ -54,14 +72,32 @@
     return '$' + num.toPrecision(2);
   }
 
-  // draw organism
+  // Map price -> [0..100] health with gentle curvature:
+  // - Very low prices keep health low but non-zero
+  // - Higher prices asymptotically approach 100
+  function priceToHealth(price) {
+    // Normalize: choose a “reference” price band for your token
+    // so typical values land around 40–70% health.
+    // You can tune REF and GAIN after you see live behavior.
+    const REF = 0.01;     // ~1 cent as pivot for this test token
+    const GAIN = 85;      // max health contribution from price
+    const x = Math.max(0, price / REF);    // normalized price
+    // smooth curve (logistic-like using arctan):
+    const curve = Math.atan(x) / (Math.PI/2); // 0..1
+    const h = 5 + curve * GAIN;               // reserve 5% floor
+    return Math.max(5, Math.min(100, h));
+  }
+
+  // ---------- Drawing ----------
   function redraw() {
     ctx.clearRect(0,0,canvas.width, canvas.height);
-    const cx = canvas.width/2, cy = canvas.height/2 + 10;
+    const cx = canvas.width/2;
+    const cy = canvas.height/2 + 10;
 
-    const beat = (Math.sin(t/400) + 1)/2; // 0..1
-    const healthFactor = Math.max(0.5, health/100);
-    const radius = 78 + beat*24*healthFactor + stage*3;
+    // Base pulse driven by time + health
+    const beat = (Math.sin(t/420) + 1)/2; // 0..1
+    const healthFactor = clamp01(health/100);
+    const radius = 78 + beat*26*healthFactor + stage*3;
 
     const grd = ctx.createRadialGradient(cx, cy, radius*0.2, cx, cy, radius);
     grd.addColorStop(0, 'rgba(120,255,210,0.95)');
@@ -69,6 +105,7 @@
     ctx.fillStyle = grd;
     ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2); ctx.fill();
 
+    // filaments
     ctx.strokeStyle = 'rgba(140,210,255,0.25)';
     for (let i=0;i<stage*8;i++){
       const ang = (i/stage)*Math.PI/4 + t/3000 + i*0.13;
@@ -80,17 +117,23 @@
     }
   }
 
+  // ---------- UI sync ----------
   function applyUI(alerts=[]) {
+    // ease health toward target
+    health += (targetHealth - health) * EASE;
+
+    // mutation creeps (faster if health is high)
+    mutation = Math.min(100, mutation + (0.05 + 0.35*clamp01(health/100)));
+
     healthBar.style.width = Math.max(0, Math.min(100, health)) + '%';
     healthPct.textContent = Math.round(Math.max(0, health)) + '%';
     mutBar.style.width = Math.max(0, Math.min(100, mutation)) + '%';
     mutPct.textContent = Math.round(Math.max(0, mutation)) + '%';
 
-    if (health <= 0) {
-      alive = false;
+    // status labels
+    if (health <= 0.5) {
       statusWord.textContent = 'Dead';
-      statusWord.classList.remove('alive');
-      statusWord.classList.add('dead');
+      statusWord.classList.remove('alive'); statusWord.classList.add('dead');
       heartbeatRate.textContent = 'Flatline';
     } else if (health < 10) {
       statusWord.textContent = 'Dying';
@@ -102,28 +145,26 @@
       heartbeatRate.textContent = 'Weak';
     } else {
       statusWord.textContent = 'Alive';
-      statusWord.classList.add('alive');
-      statusWord.classList.remove('dead');
+      statusWord.classList.add('alive'); statusWord.classList.remove('dead');
       heartbeatRate.textContent = 'Stable';
     }
 
+    // alerts
     if (alerts.length) {
       const text = alerts[0];
-      const level = text.startsWith('COLLAPSE') ? 'crit' : (text.includes('Critical') ? 'crit' : (text.includes('Starvation') ? 'warn' : ''));
+      const level = text.startsWith('COLLAPSE') ? 'crit'
+                   : text.includes('Critical') ? 'crit'
+                   : text.includes('Starvation') ? 'warn' : '';
       setAlert(text, level);
-    } else setAlert('', '');
+    } else if (failCount === 0) {
+      setAlert('', '');
+    }
 
+    // vibe effect
     if (health > 0 && health < 12) hero.classList.add('shake'); else hero.classList.remove('shake');
   }
 
-  // SFX toggle
-  sfxBtn.addEventListener('click', () => {
-    sfx = !sfx;
-    sfxBtn.textContent = sfx ? '🔊 SFX On' : '🔈 SFX Off';
-    sfxBtn.setAttribute('aria-pressed', String(sfx));
-  });
-
-  // Backend polling (every 5s). We interpret returned price into a visual health.
+  // ---------- Backend polling ----------
   async function pollBackend() {
     if (!API) return;
 
@@ -132,47 +173,46 @@
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const s = await r.json();
 
+      // update price/time display
       const price = Number(s.price || 0);
       priceLabel.textContent = fmtUsd(price);
       updatedLabel.textContent = new Date(s.timestamp || Date.now()).toLocaleTimeString();
 
-      const targetHealth = Math.max(5, Math.min(100, price > 0 ? Math.log10(price*1000 + 1) * 100 : 10));
-      health = health + (targetHealth - health) * 0.25; // ease
-      mutation = Math.min(100, mutation + (price > 0 ? 0.6 : 0.1));
+      // compute a new target health from price
+      targetHealth = priceToHealth(price);
 
-      if (mutation >= 100 && health >= 25) {
-        mutation = 0;
-        stage += 1;
-        stageLabel.textContent = String(stage);
-        const names = {1:'The Cell',2:'The Organism',3:'The Eye',4:'The Hybrid',5:'The Apex'};
-        stageBadge.textContent = `Stage ${stage} • ${names[stage] || '???'}`;
-        orgWrap.style.transform = 'scale(1.04)';
-        setTimeout(()=> orgWrap.style.transform='scale(1.0)', 220);
-        log(`✨ Mutation achieved → Stage ${stage}`);
-      }
-
-      applyUI([]);
+      // reset warning on success
+      failCount = 0;
 
     } catch (e) {
-      setAlert('Backend unreachable. Showing local animation only.', 'warn');
+      failCount++;
+      // Exponential-ish backoff messaging
+      if (failCount === 1) setAlert('Backend unreachable. Showing local animation only.', 'warn');
+      if (failCount > 6) setAlert('Backend still offline. Retrying…', 'warn');
     } finally {
-      setTimeout(pollBackend, 5000);
+      setTimeout(pollBackend, POLL_MS);
     }
   }
 
-  // Animation ticker
-  setInterval(() => { t += 50; redraw(); }, 50);
+  // ---------- Interactions ----------
+  sfxBtn.addEventListener('click', () => {
+    sfx = !sfx;
+    sfxBtn.textContent = sfx ? '🔊 SFX On' : '🔈 SFX Off';
+    sfxBtn.setAttribute('aria-pressed', String(sfx));
+  });
 
-  // Static label for now
-  decayRate.textContent = '1% / 10m';
-
-  // Feed button micro pulse
   feedBtn.addEventListener('click', (ev) => {
     ev.preventDefault();
+    // micro “pulse”
     orgWrap.style.transform = 'scale(1.02)';
     setTimeout(()=> orgWrap.style.transform = 'scale(1.0)', 120);
+    // little health nudge so it feels responsive
+    targetHealth = Math.min(100, targetHealth + 2);
     log('Manual feed trigger (demo).');
   });
 
+  // ---------- Tickers ----------
+  setInterval(() => { t += 50; redraw(); applyUI([]); }, 50);
+  decayRate.textContent = '1% / 10m';
   pollBackend();
 })();
