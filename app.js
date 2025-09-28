@@ -20,18 +20,18 @@ function draw(){
 
   ctx.clearRect(0,0,W,H);
 
-  // Fluid haze (cool midnight)
-  const haze = ctx.createRadialGradient(W*0.5, H*0.65, H*0.06, W*0.5, H*0.7, H*0.95);
-  haze.addColorStop(0,'rgba(20,56,100,.55)');
-  haze.addColorStop(0.6,'rgba(8,20,40,.25)');
-  haze.addColorStop(1,'rgba(6,12,22,0)');
+  // Haze depends on theme (we just add dynamic vignette here)
+  const haze = ctx.createRadialGradient(W*0.5, H*0.68, H*0.06, W*0.5, H*0.72, H*0.95);
+  // both themes look fine with a subtle blue-ish glow overlay
+  haze.addColorStop(0,'rgba(30,60,120,.10)');
+  haze.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=haze; ctx.fillRect(0,0,W,H);
 
-  // Slow ripple rings
+  // Rings
   ctx.save(); ctx.translate(W*0.5, H*0.7);
   for(let i=0;i<9;i++){
     const R = 60 + i*70 + Math.sin(t*0.35+i)*2.2;
-    ctx.strokeStyle=`rgba(110,170,230,${0.16 - i*0.013})`;
+    ctx.strokeStyle=`rgba(200,200,255,${0.08 - i*0.007})`;
     ctx.lineWidth=1.2;
     ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.stroke();
   }
@@ -43,17 +43,17 @@ function draw(){
   const pulse = 26 + Math.sin(t*2)*2;
 
   const glow = ctx.createRadialGradient(nx, ny, 0, nx, ny, 140);
-  glow.addColorStop(0,'rgba(160,210,255,.55)');
-  glow.addColorStop(1,'rgba(160,210,255,0)');
+  glow.addColorStop(0,'rgba(200,220,255,.40)');
+  glow.addColorStop(1,'rgba(200,220,255,0)');
   ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(nx,ny,140,0,Math.PI*2); ctx.fill();
 
   const orb = ctx.createRadialGradient(nx, ny, 0, nx, ny, 52+pulse);
-  orb.addColorStop(0,'rgba(210,240,255,1)');
-  orb.addColorStop(1,'rgba(150,190,230,.07)');
+  orb.addColorStop(0,'rgba(220,245,255,1)');
+  orb.addColorStop(1,'rgba(160,190,230,.07)');
   ctx.fillStyle=orb; ctx.beginPath(); ctx.arc(nx,ny,52+pulse,0,Math.PI*2); ctx.fill();
 
-  // Tether curve
-  ctx.strokeStyle='rgba(175,220,255,.7)'; ctx.lineWidth=6; ctx.lineCap='round';
+  // Tether
+  ctx.strokeStyle='rgba(220,230,255,.65)'; ctx.lineWidth=6; ctx.lineCap='round';
   ctx.beginPath();
   const cp1x = nx-140, cp1y = ny-80 + Math.sin(t*.9)*16;
   const endx = nx-280 + Math.sin(t*.6)*9, endy = ny-36 + Math.cos(t*.7)*12;
@@ -64,7 +64,7 @@ function draw(){
     m.x += m.vx + Math.sin(t*0.5)*0.02;
     m.y += m.vy + Math.cos(t*0.4)*0.02;
     if(m.x<0)m.x=W; if(m.x>W)m.x=0; if(m.y<0)m.y=H; if(m.y>H)m.y=0;
-    ctx.fillStyle='rgba(190,220,255,.55)';
+    ctx.fillStyle='rgba(210,230,255,.5)';
     ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,Math.PI*2); ctx.fill();
   }
 
@@ -91,16 +91,15 @@ const tradesBody = document.getElementById('trades-body');
 const sfxBtn = document.getElementById('sfxBtn');
 const feedBtn = document.getElementById('feedBtn');
 const tradeBtn = document.getElementById('tradeBtn');
+const themeBtn = document.getElementById('themeBtn');
 
+/******** Helpers ********/
 const clamp = (v,min=0,max=1)=>Math.max(min,Math.min(max,v));
 const nowHHMMSS = ()=>{ const d=new Date(), p=n=>String(n).padStart(2,'0'); return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
 const fmtUSD = n=>`$${Number(n).toFixed(2)}`;
 
 /******** Gauges (conic arcs) ********/
-function setGauge(el, pct){
-  const deg = Math.round(clamp(pct)*360);
-  el.style.setProperty('--val', deg);
-}
+function setGauge(el, pct){ el.style.setProperty('--val', Math.round(clamp(pct)*360)); }
 function setHealth(v){ setGauge(gaugeHealth, v); healthPct.textContent = `${Math.round(clamp(v)*100)}%`; }
 function setMutation(v){ setGauge(gaugeMut, v);   mutPct.textContent   = `${Math.round(clamp(v)*100)}%`; }
 function setStage(n){ stageNum.textContent=n; stageBadge.textContent=`Stage ${n} · The Cell`; }
@@ -109,10 +108,10 @@ function setFlow(x){
   flowLabel.textContent = x>0.12?'Feeding':x<-0.12?'Starving':'Neutral';
 }
 
-/******** Toast renderer (max 5) ********/
+/******** Toast renderer (max 3) ********/
 function renderTrades(items){
   tradesBody.innerHTML='';
-  const rows = items.slice(-5).reverse();
+  const rows = items.slice(-3).reverse();
   for(const r of rows){
     const node = document.createElement('div');
     node.className = 'toast';
@@ -125,6 +124,18 @@ function renderTrades(items){
     tradesBody.appendChild(node);
   }
 }
+
+/******** Theme toggle ********/
+themeBtn.addEventListener('click', ()=>{
+  const b = document.body;
+  if (b.classList.contains('theme-cool')) {
+    b.classList.remove('theme-cool'); b.classList.add('theme-warm');
+    themeBtn.textContent = 'Theme: Cool';
+  } else {
+    b.classList.remove('theme-warm'); b.classList.add('theme-cool');
+    themeBtn.textContent = 'Theme: Warm';
+  }
+});
 
 /******** Optional womb SFX ********/
 let AC=null,gain=null;
@@ -146,7 +157,7 @@ sfxBtn.addEventListener('click',()=>{
   else { gain.gain.linearRampToValueAtTime(0.06, AC.currentTime+0.3); sfxBtn.textContent='🔊 SFX On'; }
 });
 
-/******** Tiny simulator (swap later) ********/
+/******** Simulator (swap later) ********/
 let HEALTH=0.44, MUT=0.06, FLOW=0.0, STAGE=1;
 const simTrades=[];
 function tickSim(){
@@ -182,8 +193,7 @@ setInterval(()=>{
 
 renderTrades(simTrades);
 
-/* === Hook real endpoints later:
-   GET /health -> { price:Number, timestamp:String|ms, health?:Number, mutation?:Number, stage?:Number }
-   GET /trades -> [ { time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd:Number, priceUsd:Number }, ... ]
-   Then call set* & renderTrades(items)
+/* Hook real endpoints later:
+   /health -> { price, timestamp, health?, mutation?, stage? }
+   /trades -> [{ time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd, priceUsd }]
 */
