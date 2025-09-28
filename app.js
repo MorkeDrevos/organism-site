@@ -291,3 +291,7 @@ decayRate.textContent = `1% / 10m`;
 setHealth(HEALTH); setMutation(MUT); setStage(STAGE);
 pollHealth(); simTrades();
 setInterval(pollHealth, 6_000);
+
+// Fluid haze background
+ctx.fillStyle = grad;
+ctx.fillRect(0,0,W,H);
