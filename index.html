@@ -36,9 +36,9 @@
     </div>
   </header>
 
-  <!-- Floating cards (always above the fold) -->
+  <!-- Floating cards -->
   <section class="cards">
-    <!-- Left: Vitals -->
+    <!-- Vitals -->
     <article class="card vitals">
       <header class="card-title">
         <div class="dot live"></div> Vitals
@@ -59,14 +59,12 @@
       </div>
     </article>
 
-    <!-- Right: Feeding / Starving (3 most recent pills) -->
+    <!-- Trades (ticker of up to 3 pills) -->
     <article class="card feed">
       <header class="card-title">
         <div class="dot live"></div> Feeding / Starving
       </header>
-      <div id="tradePills" class="pill-list">
-        <!-- pills injected here -->
-      </div>
+      <div id="tradePills" class="pill-ticker"><!-- pills injected here --></div>
       <footer class="legend">
         <span class="key feed">Feed</span>
         <span class="key starve">Starve</span>
