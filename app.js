@@ -1,262 +1,230 @@
+/* ===== CONFIG ===== */
+const API = "https://organism-backend.onrender.com"; // <- change if needed
+const POLL_HEALTH_MS = 6000;
+const POLL_TRADES_MS = 6000;
 
-/***** CONFIG *****/
-const API = "https://organism-backend.onrender.com"; // your backend base
-const JUP_SWAP = "https://jup.ag/swap";               // set to your token link when ready
-
-// DOM refs
+/* ===== DOM ===== */
 const canvas = document.getElementById("org-canvas");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-const statusWord   = document.getElementById("status");
-const heartbeat    = document.getElementById("heartbeat");
-const priceLabel   = document.getElementById("priceLabel");
-const updatedLabel = document.getElementById("updatedLabel");
-const flowBar      = document.getElementById("flowBar");
-const flowNeedle   = document.getElementById("flowNeedle");
-const flowLabel    = document.getElementById("flowLabel");
+const statusWord = document.getElementById("status");
+const heartbeat = document.getElementById("heartbeat");
+const feedBtn = document.getElementById("feedBtn");
+const tradeBtn = document.getElementById("tradeBtn");
+const sfxBtn = document.getElementById("sfxBtn");
 
 const healthBar = document.getElementById("healthBar");
-const mutBar    = document.getElementById("mutBar");
-const healthNum = document.getElementById("healthNum");
-const mutNum    = document.getElementById("mutNum");
+const mutBar = document.getElementById("mutBar");
+const healthPct = document.getElementById("healthPct");
+const mutPct = document.getElementById("mutPct");
+const stageNum = document.getElementById("stageNum");
+const stageBadge = document.getElementById("stageBadge");
 const decayRate = document.getElementById("decayRate");
-const stageNum  = document.getElementById("stageNum");
-const stageBadge= document.getElementById("stageBadge");
-
+const priceLabel = document.getElementById("priceLabel");
+const updatedLabel = document.getElementById("updatedLabel");
+const flowBar = document.getElementById("flowBar");
+const flowLabel = document.getElementById("flowLabel");
 const tradesBody = document.getElementById("trades-body");
-const feedBtn    = document.getElementById("feedBtn");
-const sfxBtn     = document.getElementById("sfxBtn");
-const tradeBtn   = document.getElementById("tradeBtn");
 
-tradeBtn.href = JUP_SWAP;
-
-/***** STATE *****/
-let health = 0.66;     // 0..1 simulated start
-let mutation = 0.06;   // 0..1
+/* ===== State ===== */
+let health = 0.55;        // 0..1
+let mutation = 0.06;      // 0..1
 let stage = 1;
-let decay = 0.01;      // 1% / 10m display
 let sfx = false;
 
 let lastPrice = 0;
 let lastTs = 0;
+let net = 0;              // -1..+1 recent net flow window
+const flows = [];         // last N trades window
+const FLOW_WINDOW = 20;
 
-let flowWindow = [];  // last 5 minutes of +value (buys) / -value (sells)
-
-/***** UTIL *****/
-const clamp = (v,a,b)=> Math.max(a, Math.min(b,v));
-const fmtUSD = (n)=> n == null ? "$—" : `$${Number(n).toFixed(4)}`;
-const fmtMoney2 = (n)=> n == null ? "$—" : `$${Number(n).toFixed(2)}`;
-const pad2 = (n)=> String(n).padStart(2,"0");
-const fmtTime = (ts)=>{
-  const d = new Date(ts);
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-};
-
-/***** CANVAS SIZING *****/
-function resizeCanvas(){
-  canvas.width  = window.innerWidth;
-  canvas.height = window.innerHeight;
+/* ===== Canvas sizing ===== */
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.floor(rect.width * devicePixelRatio);
+  canvas.height = Math.floor(rect.height * devicePixelRatio);
+  ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
 }
-window.addEventListener("resize", resizeCanvas);
+addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-/***** ORGANISM DRAW (mysterious womb, always visible) *****/
-function drawOrganism(){
-  const W = canvas.width, H = canvas.height;
-  const t = performance.now()/1000;
+/* ===== Creature render (tease below panels) ===== */
+let t0 = performance.now();
+function drawOrganism() {
+  const now = performance.now();
+  const t = (now - t0) / 1000;
 
+  const W = canvas.width / devicePixelRatio;
+  const H = canvas.height / devicePixelRatio;
   ctx.clearRect(0,0,W,H);
 
-  // position: slightly below center so it peeks around panels
-  const cx = W*0.52;
-  const cy = H*0.70;
+  // Center slightly off so the lower globe peeks out
+  const cx = W * 0.5;
+  const cy = H * 0.72;
+  const base = Math.min(W, H) * 0.36;
 
-  // big womb gradient (elliptical)
-  const baseR = Math.min(W,H)*0.58;
-  const grad = ctx.createRadialGradient(cx, cy, baseR*0.05, cx, cy, baseR*1.1);
-  grad.addColorStop(0,   `rgba(120,210,230,0.20)`);
-  grad.addColorStop(0.5, `rgba(72,130,200,0.10)`);
-  grad.addColorStop(1,   `rgba(10,20,35,0.0)`);
+  // soft chamber glow
+  const grad = ctx.createRadialGradient(cx, cy, base*0.1, cx, cy, base*1.3);
+  grad.addColorStop(0, `rgba(145, 240, 215, ${0.20 + 0.08*Math.sin(t*1.2)})`);
+  grad.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.arc(cx, cy, baseR, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, base*1.35, 0, Math.PI*2); ctx.fill();
 
-  // nucleus pulse (tied to health)
-  const pulse = 0.12 + 0.2*Math.sin(t*2.2);
-  const r = baseR*(0.10 + 0.18*health + pulse*0.05);
-  ctx.fillStyle = `rgba(160,255,235,0.24)`;
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.fill();
+  // nucleus
+  const hue = 170 + 25*Math.sin(t*0.8);
+  ctx.fillStyle = `hsla(${hue}, 70%, ${54 + 10*Math.sin(t*2)}%, .85)`;
+  ctx.beginPath(); ctx.arc(cx, cy, base*(0.30 + 0.05*Math.sin(t*1.5)), 0, Math.PI*2); ctx.fill();
 
-  // concentric rings drifting
+  // drift rings
   ctx.lineWidth = 1.2;
-  ctx.strokeStyle = "rgba(140,200,255,0.10)";
-  for(let i=0;i<5;i++){
-    const rr = baseR*(0.30 + 0.12*i + 0.02*Math.sin(t*0.8 + i));
-    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI*2); ctx.stroke();
+  for (let i=1;i<=5;i++){
+    const r = base * (0.42 + i*0.12 + 0.02*Math.sin(t + i));
+    ctx.strokeStyle = `rgba(130,180,210, ${0.08 - i*0.008})`;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
   }
 
-  // drifting specs
-  for(let i=0;i<14;i++){
-    const a = t*0.07 + i*0.6;
-    const rr = baseR*(0.25 + 0.65*(i/14));
-    const x = cx + Math.cos(a)*rr;
-    const y = cy + Math.sin(a*1.2)*rr*0.6;
-    ctx.fillStyle = "rgba(200,255,255,0.18)";
-    ctx.beginPath(); ctx.arc(x,y, 1.6 + 1.2*Math.sin(t*2+i), 0, Math.PI*2); ctx.fill();
+  // specks
+  for (let i=0;i<18;i++){
+    const rr = base*(0.18 + 0.68*Math.random());
+    const a = t*0.12 + i*0.35;
+    const x = cx + Math.cos(a+i)*rr;
+    const y = cy + Math.sin(a+i)*rr*0.8;
+    const d = 1.2 + (i%5===0 ? 2.5 : 0.8);
+    ctx.fillStyle = `rgba(180, 220, 250, ${0.18 + 0.2*Math.random()})`;
+    ctx.beginPath(); ctx.arc(x, y, d, 0, Math.PI*2); ctx.fill();
   }
 
   requestAnimationFrame(drawOrganism);
 }
 requestAnimationFrame(drawOrganism);
 
-/***** HEALTH/MUTATION UI *****/
-function setHealth(v){
-  health = clamp(v,0,1);
-  healthBar.style.width = `${Math.round(health*100)}%`;
-  healthNum.textContent = `${Math.round(health*100)}%`;
-}
-function setMutation(v){
-  mutation = clamp(v,0,1);
-  mutBar.style.width = `${Math.round(mutation*100)}%`;
-  mutNum.textContent = `${Math.round(mutation*100)}%`;
-}
-function setStage(n){
-  stage = n;
-  stageNum.textContent = String(n);
-  stageBadge.textContent = n===1 ? "Stage 1 · The Cell" : `Stage ${n}`;
-}
+/* ===== Helpers ===== */
+const fmtUSD = n => typeof n === "number" ? `$${n.toFixed(4)}` : "$—";
+const fmtUSDSmall = n => typeof n === "number" ? `$${n.toFixed(2)}` : "$—";
+const fmtTime = ts => {
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  const ss = String(d.getSeconds()).padStart(2,"0");
+  return `${hh}:${mm}:${ss}`;
+};
+function setHealth(v){ health = Math.max(0, Math.min(1, v)); healthBar.style.width = `${Math.round(health*100)}%`; healthPct.textContent = `${Math.round(health*100)}%`; }
+function setMutation(v){ mutation = Math.max(0, Math.min(1, v)); mutBar.style.width = `${Math.round(mutation*100)}%`; mutPct.textContent = `${Math.round(mutation*100)}%`; }
+function setStage(n){ stage = n; stageNum.textContent = String(n); stageBadge.textContent = n===1 ? "Stage 1 · The Cell" : `Stage ${n}`; }
 function setFlow(v){
-  // v is -1..+1, map to bar width & label
-  const W = flowBar.clientWidth;
-  const x = (v*0.45 + 0.5)*W; // keep needle inside
-  flowNeedle.style.left = `${Math.round(x)}px`;
-  flowLabel.textContent = v>0.08 ? "Feeding" : v<-0.08 ? "Starving" : "Neutral";
+  // v should be -1..+1
+  const mid = 50 + Math.round(v*50);
+  flowBar.style.width = `${Math.max(6, Math.min(100, mid))}%`;
+  flowLabel.textContent = v>0.04 ? "Feeding" : v<-0.04 ? "Starving" : "Neutral";
 }
 
-/***** POLLERS (backend) *****/
-const POLL_HEALTH_MS = 6_000;
-const POLL_TRADES_MS = 6_000;
-
+/* ===== Poll: /health ===== */
 async function pollHealth(){
   try{
-    const resp = await fetch(`${API}/health`, { cache:"no-store" });
-    const j = await resp.json();
-    lastPrice = Number(j.price)||0;
+    const r = await fetch(`${API}/health`, { cache:"no-store" });
+    const j = await r.json();
+    const price = Number(j.price) || 0;
+    lastPrice = price;
     lastTs = j.timestamp || Date.now();
-
-    priceLabel.textContent   = fmtUSD(lastPrice);
+    priceLabel.textContent = fmtUSDSmall(price);
     updatedLabel.textContent = fmtTime(lastTs);
 
-    // nudge health toward price bands (demo)
-    const target = clamp(lastPrice*10,0,1); // simple demo mapping
-    const delta = (target - health)*0.12;
-    setHealth(health + delta);
-
-    // small creep of mutation
-    setMutation(mutation + 0.002);
+    // gently push health with price vibration (demo)
+    const target = 0.45 + Math.tanh(price*20)/10; // playful mapping
+    setHealth(health*0.9 + target*0.1);
   }catch(e){
-    console.error("health fetch error:", e);
+    updatedLabel.textContent = "—:—:—";
   }
 }
 
+/* ===== Normalize trades =====
+ Accepts:
+  A) our shape: [{ time, type, valueUsd, priceUsd }, ...]
+  B) Jupiter-ish: [{ side:"BUY"/"SELL", price, amount, ts }, ...]
+*/
+function normalizeTrades(arr){
+  return arr.map(x=>{
+    if (x.time && x.type) return x;
+    const type = (x.side || "").toLowerCase()==="buy" ? "feed" : "starve";
+    const valueUsd = (x.price ?? 0) * (x.amount ?? 0);
+    const priceUsd = x.price ?? 0;
+    const time = x.ts ?? Date.now();
+    return { time, type, valueUsd, priceUsd };
+  });
+}
+
+/* ===== Poll: /trades ===== */
 async function pollTrades(){
   try{
-    const resp = await fetch(`${API}/trades`, { cache:"no-store" });
-    const arr = await resp.json();
+    const r = await fetch(`${API}/trades`, { cache:"no-store" });
+    const j = await r.json();
+    const list = Array.isArray(j) ? j : (j.trades || []);
+    const trades = normalizeTrades(list)
+      .sort((a,b)=>b.time-a.time)
+      .slice(0,12);
 
-    // Accept either normalized or Jupiter-like objects
-    const norm = arr.map(row => {
-      if (row.time && row.type){            // normalized already
-        return row;
-      } else {
-        // Jupiter-ish
-        const side = (row.side || "").toLowerCase()==="buy" ? "feed" : "starve";
-        const priceUsd = Number(row.price || 0);
-        const valueUsd = Number(row.valueUsd || (priceUsd * Number(row.amount||0)));
-        return { time: row.ts || row.time || Date.now(), type: side, valueUsd, priceUsd };
-      }
-    });
+    // Render
+    tradesBody.innerHTML = "";
+    let buys=0, sells=0;
+    for (const tr of trades){
+      const row = document.createElement("div");
+      row.className = "trade";
+      const t = fmtTime(tr.time);
+      const typeTxt = tr.type === "feed" ? "Feed" : "Starve";
+      const valueTxt = fmtUSDSmall(tr.valueUsd ?? 0);
+      const priceTxt = fmtUSD(tr.priceUsd ?? 0);
 
-    // render latest 8
-    renderTrades(norm.slice(0,8));
+      row.innerHTML = `
+        <div class="c-time">${t}</div>
+        <div class="c-type type ${tr.type}">${typeTxt}</div>
+        <div class="c-value">${valueTxt}</div>
+        <div class="c-price">${priceTxt}</div>
+      `;
+      tradesBody.appendChild(row);
 
-    // update net flow window (5m)
-    const now = Date.now();
-    for (const t of norm) {
-      const signed = t.type==="feed" ? +Number(t.valueUsd||0) : -Number(t.valueUsd||0);
-      flowWindow.push({ ts: now, v: signed });
+      // Net flow window
+      if (tr.type === "feed") buys += tr.valueUsd ?? 0;
+      if (tr.type === "starve") sells += tr.valueUsd ?? 0;
     }
-    // purge >5m
-    const cutoff = now - 5*60*1000;
-    flowWindow = flowWindow.filter(x => x.ts >= cutoff);
-    const sum = flowWindow.reduce((a,b)=>a+b.v,0);
-    const net = clamp(sum/100, -1, +1); // scale to -1..1 for needle
-    setFlow(net);
-    // nudge health a hair in net direction
-    setHealth(health + net*0.02);
+    const sum = buys + sells;
+    const dir = sum>0 ? (buys - sells) / sum : 0;
+    flows.push(dir);
+    if (flows.length > FLOW_WINDOW) flows.shift();
+    const avg = flows.reduce((a,b)=>a+b,0) / flows.length;
+    setFlow(avg);
+
+    // small nudge to health based on flow
+    setHealth(health + avg*0.02);
   }catch(e){
-    console.error("trades fetch error:", e);
+    // ignore
   }
 }
 
-function renderTrades(list){
-  tradesBody.innerHTML = "";
-  for(const r of list){
-    const tr = document.createElement("tr");
-    const cls = r.type==="feed" ? "type-feed" : "type-starve";
-    tr.innerHTML = `
-      <td>${fmtTime(r.time)}</td>
-      <td class="${cls}">${r.type === "feed" ? "Feed" : "Starve"}</td>
-      <td>${fmtMoney2(r.valueUsd)}</td>
-      <td>${fmtUSD(r.priceUsd ?? r.price)}</td>
-    `;
-    tradesBody.appendChild(tr);
-  }
-}
-
-/***** DECAY *****/
+/* ===== Decay driver ===== */
 function tickDecay(){
-  setHealth(health - 0.006);     // slow drift down
-  if (health>0.85) setMutation(mutation + 0.004); // high health accelerates mutation
+  setHealth(health - 0.01);           // 1% tick
+  setMutation(mutation + 0.004*health); // slow creep
+  if (health < 0.02 && stage>0){ /* could drop stage later */ }
 }
 
-/***** INTERACTIONS *****/
-feedBtn.addEventListener("click", (ev)=>{
-  ev.preventDefault();
-  setHealth(health + 0.05); // micro-boost
-});
-sfxBtn.addEventListener("click", ()=>{
+/* ===== Interactions ===== */
+sfxBtn.addEventListener("click", ()=> {
   sfx = !sfx;
   sfxBtn.textContent = sfx ? "🔊 SFX On" : "🔇 SFX Off";
 });
+feedBtn.addEventListener("click", (e)=>{
+  e.preventDefault();
+  setHealth(health + 0.06);
+});
 
-/***** SCHEDULES *****/
+/* ===== Schedules ===== */
 setInterval(tickDecay, 10_000);
 setInterval(pollHealth, POLL_HEALTH_MS);
 setInterval(pollTrades, POLL_TRADES_MS);
 
-// initial
+/* initial */
 pollHealth();
 pollTrades();
 
-const pulse = 0.1 * Math.sin(t * 2) + 1; 
-ctx.beginPath();
-ctx.arc(Cx, Cy, baseR * pulse, 0, 2 * Math.PI);
-ctx.fillStyle = `hsla(${hue}, 80%, 55%, 0.25)`;
-ctx.fill();
-
-for (let i = 0; i < 20; i++) {
-  const a = t * 0.2 + i;
-  const r = 200 + 50 * Math.sin(t * 0.3 + i);
-  const x = Cx + Math.cos(a) * r;
-  const y = Cy + Math.sin(a) * r;
-
-  ctx.beginPath();
-  ctx.arc(x, y, 2, 0, 2 * Math.PI);
-  ctx.fillStyle = "rgba(255,255,255,0.2)";
-  ctx.fill();
-}
-const grad = ctx.createRadialGradient(Cx, Cy, 0, Cx, Cy, 300);
-grad.addColorStop(0, "rgba(0,255,200,0.15)");
-grad.addColorStop(1, "rgba(0,0,0,0)");
-ctx.fillStyle = grad;
-ctx.fillRect(0, 0, W, H);
+/* Optional: set your token’s Jupiter swap URL here */
+tradeBtn.href = "#";
