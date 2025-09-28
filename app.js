@@ -253,7 +253,7 @@ function simTrades(){
   const type   = isBuy ? 'Feed' : 'Starve';
   const now = clock();
 
-  addTradeRow({ time: now, type, valueUsd:value, priceUsd:price });
+  addTradeRow({ time: "HH:MM:SS", type: "Feed"|"Starve", valueUsd: Number, priceUsd: Number });
   // nudge net flow
   const delta = (isBuy ? 1 : -1) * Math.min(1, value/50_000);
   setFlow( clamp(FLOW + delta*0.2, -1, 1) );
