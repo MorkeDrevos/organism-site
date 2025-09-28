@@ -1,4 +1,3 @@
-// backend/server.js
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
@@ -6,29 +5,29 @@ import cors from "cors";
 const app = express();
 app.use(cors());
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 10000;
 
-// Replace this with the coin you want to test (BULL, NYX, etc.)
-const TOKEN_MINT = "So11111111111111111111111111111111111111112"; // Example: SOL
-
-// Simple endpoint to get token data from Birdeye
-app.get("/health", async (req, res) => {
+// SIMPLE /health ENDPOINT
+// Replace TOKEN_MINT + Birdeye call later if you want live price,
+// for now this returns a placeholder price 0 (and still proves the roundtrip).
+app.get("/health", async (_req, res) => {
   try {
-    const url = `https://public-api.birdeye.so/public/price?address=${TOKEN_MINT}`;
-    const response = await fetch(url, {
-      headers: { "x-chain": "solana" }
-    });
-    const data = await response.json();
+    // Example: you could fetch a price here and return it
+    // const r = await fetch("https://public-api.birdeye.so/public/price?address=So11111111111111111111111111111111111111112", { headers: { "x-chain": "solana" }});
+    // const j = await r.json();
+    // const price = j?.data?.value ?? 0;
+
     res.json({
       status: "alive",
-      price: data.data?.value || 0,
-      timestamp: Date.now(),
+      price: 0,
+      timestamp: Date.now()
     });
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch token data", details: err.message });
+    res.status(500).json({ error: "Failed to fetch", details: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Backend running on port ${PORT}`);
-});
+// Optional root message
+app.get("/", (_req, res) => res.type("text").send("THE ORGANISM API — use /health"));
+
+app.listen(PORT, () => console.log(`✅ Backend running on :${PORT}`));
