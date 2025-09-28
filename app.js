@@ -255,3 +255,8 @@ for (let i = 0; i < 20; i++) {
   ctx.fillStyle = "rgba(255,255,255,0.2)";
   ctx.fill();
 }
+const grad = ctx.createRadialGradient(Cx, Cy, 0, Cx, Cy, 300);
+grad.addColorStop(0, "rgba(0,255,200,0.15)");
+grad.addColorStop(1, "rgba(0,0,0,0)");
+ctx.fillStyle = grad;
+ctx.fillRect(0, 0, W, H);
