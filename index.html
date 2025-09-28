@@ -3,88 +3,75 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>THE ORGANISM — Habitat Console</title>
+  <title>ORGANISM.ZERO</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="theme-cool">
-  <!-- Creature chamber lives behind all UI -->
+<body>
+  <!-- Creature layer -->
   <canvas id="org-canvas" aria-hidden="true"></canvas>
 
-  <!-- Top lab ribbon -->
-  <header class="ribbon">
-    <div class="brand">THE ORGANISM</div>
-    <div class="stage chip mono"><span id="stageText">Stage 1 · The Cell</span></div>
+  <!-- Hero title -->
+  <div class="hero">
+    <h1>ORGANISM<span>.ZERO</span></h1>
+  </div>
 
-    <div class="inline">
-      <span>Status: <span id="status">Alive</span></span>
-      <span>Heartbeat: <span id="heartbeat">Stable</span></span>
+  <!-- Left: last 3 trades as vertical pills -->
+  <aside class="left-rail">
+    <div id="tradePills" class="pill-stack">
+      <!-- pills injected -->
+    </div>
+  </aside>
+
+  <!-- Right: minimal stats -->
+  <aside class="right-rail">
+    <div class="stat">
+      <label>Health</label>
+      <div class="bar"><span id="healthBar"></span></div>
+      <div id="healthNum" class="mono pct">0%</div>
     </div>
 
-    <div class="inline mono right">
-      <span>Price <span id="priceLabel">$0.00</span></span>
-      <span>Updated <span id="updatedLabel">--:--:--</span></span>
+    <div class="stat">
+      <label>Mutation</label>
+      <div class="bar"><span id="mutBar"></span></div>
+      <div id="mutNum" class="mono pct">0%</div>
+    </div>
+
+    <div class="traits" id="traitsRow">
+      <!-- trait chips injected -->
+    </div>
+  </aside>
+
+  <!-- Bottom status bar -->
+  <footer class="statusbar">
+    <div class="slot brand">ORGANISM.ZERO</div>
+
+    <div class="slot info mono">
+      <span>Stage <span id="stageNum">1</span></span>
+      <span class="dot"></span>
+      <span id="status">alive</span>
+      <span class="dot"></span>
+      <span id="heartbeat">stable</span>
+    </div>
+
+    <div class="slot price mono">
+      <span id="priceLabel">$0.00</span>
+      <span class="sep">•</span>
+      <span id="updatedLabel">--:--:--</span>
+    </div>
+
+    <div class="slot flow">
       <div class="flowline">
         <div class="flow"><span id="flowBar"></span></div>
-        <span id="flowLabel" class="muted">Neutral</span>
+        <span id="flowLabel" class="mono">neutral</span>
       </div>
     </div>
 
-    <div class="controls">
-      <button id="feedBtn" class="btn ghost">⚡ Feed</button>
-      <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener">Open Swap</a>
-      <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
-      <button id="themeBtn" class="btn ghost">Lab Lights</button>
+    <div class="slot controls">
+      <button id="feedBtn" class="btn">Feed</button>
+      <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
+      <button id="sfxBtn" class="btn ghost" title="Audio">SFX</button>
     </div>
-  </header>
-
-  <!-- Bottom cards -->
-  <section class="cards">
-    <!-- Vitals + Traits -->
-    <article class="card vitals">
-      <header class="card-title">
-        <div class="dot live"></div> Vitals
-      </header>
-
-      <div class="kv">
-        <span>Health</span>
-        <div class="bar"><span id="healthBar"></span></div>
-        <span id="healthNum" class="pct mono">0%</span>
-
-        <span>Mutation</span>
-        <div class="bar"><span id="mutBar"></span></div>
-        <span id="mutNum" class="pct mono">0%</span>
-
-        <span>Decay</span>
-        <span id="decayText" class="mono muted">1% / 10m</span>
-
-        <span>Stage</span>
-        <span id="stageNum" class="mono">1</span>
-      </div>
-
-      <div class="traits">
-        <div class="traits-title">Traits</div>
-        <div id="traitsRow" class="traits-row">
-          <!-- dynamic badges -->
-        </div>
-      </div>
-    </article>
-
-    <!-- Trades (3-pill ticker) -->
-    <article class="card feed">
-      <header class="card-title">
-        <div class="dot live"></div> Feeding / Starving
-      </header>
-
-      <div id="tradePills" class="pill-ticker"><!-- pills injected --></div>
-
-      <footer class="legend">
-        <span class="key feed">Feed</span>
-        <span class="key starve">Starve</span>
-      </footer>
-    </article>
-  </section>
-
-  <footer class="foot mono muted">© The Organism — Experimental art/game interface. Not financial advice.</footer>
+  </footer>
 
   <script src="app.js"></script>
 </body>
