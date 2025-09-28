@@ -1,5 +1,4 @@
-// backend/server.js — Jupiter-only price backend (full file)
-
+// backend/server.js — Jupiter v6 only (fixed)
 import express from "express";
 import fetch from "node-fetch";
 import cors from "cors";
@@ -9,13 +8,12 @@ app.use(cors());
 
 const PORT = process.env.PORT || 10000;
 
-// === Config ===
-// Default to your test mint; can override in Render -> Environment -> TOKEN_MINT
+// Your test mint (default) — override via Render env var TOKEN_MINT if needed
 const TOKEN_MINT =
   process.env.TOKEN_MINT ||
   "7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV";
 
-// Small cache so we don’t hammer Jupiter unnecessarily
+// Cache so we don’t spam Jupiter
 const CACHE_MS = Number(process.env.CACHE_MS || 5000);
 let last = { ts: 0, price: 0 };
 
@@ -29,20 +27,18 @@ async function fetchJupiterPrice(mint) {
   return p;
 }
 
-// root hint
+// Root check
 app.get("/", (_req, res) => {
   res
     .type("text")
-    .send(
-      "THE ORGANISM API (Jupiter) — use /health. Set TOKEN_MINT env to change token."
-    );
+    .send("THE ORGANISM API (Jupiter v6) — use /health. Mint = " + TOKEN_MINT);
 });
 
-// Returns { status, price, timestamp }
+// Health endpoint
 app.get("/health", async (_req, res) => {
   const now = Date.now();
 
-  // serve cached if still fresh
+  // Serve cached if fresh
   if (now - last.ts < CACHE_MS) {
     return res.json({ status: "alive", price: last.price, timestamp: now });
   }
@@ -52,20 +48,16 @@ app.get("/health", async (_req, res) => {
     last = { ts: now, price };
     res.json({ status: "alive", price, timestamp: now });
   } catch (err) {
-    // do NOT fall back to other providers per your request.
-    // Return last known price (may be 0 initially) so the frontend stays responsive.
-    console.error("Jupiter price error:", err.message);
+    console.error("Jupiter fetch error:", err.message);
     res.status(200).json({
       status: "alive",
       price: last.price || 0,
       timestamp: now,
-      note: "Jupiter fetch error; serving cached/zero price.",
+      note: "Jupiter error: " + err.message,
     });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(
-    `✅ Backend (Jupiter-only) running on :${PORT} | TOKEN_MINT=${TOKEN_MINT} | CACHE_MS=${CACHE_MS}`
-  );
+  console.log(`✅ Backend running on :${PORT} (Jupiter v6 only)`);
 });
