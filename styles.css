@@ -149,3 +149,22 @@ button:hover {
   margin: 0 auto;
   border-radius: 50%;
 }
+.grid {
+  display: block;
+}
+
+#org-canvas {
+  max-width: none;
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0; left: 0;
+  z-index: 0;
+}
+
+.panel, .vitals, .trades {
+  position: relative;
+  z-index: 1; /* float on top */
+  background: rgba(0, 0, 0, 0.4); /* HUD overlay */
+  backdrop-filter: blur(4px);
+}
