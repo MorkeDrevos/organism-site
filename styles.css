@@ -199,3 +199,89 @@ body{
   padding:2px 8px; border-radius:999px; font-size:12px; color:var(--ink-dim);
   background:#0f1a26; border:1px solid var(--stroke);
 }
+/* ==== HOTFIX: make top HUD stable & center elements ==== */
+.topbar{
+  display:flex;              /* simpler & robust */
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:16px 20px 8px 20px;
+  z-index:2;
+}
+.topbar .brand{ margin-right:8px; }
+.topbar .badge{ margin-left:8px; }
+
+/* Inline metrics row (Status · Price · Updated · Net Flow label) */
+.inline-metrics{
+  display:flex;
+  align-items:center;
+  gap:20px;
+  flex-wrap:wrap;            /* don’t sprawl on smaller widths */
+  color:var(--ink-dim);
+  font-size:14px;
+}
+
+/* ---- Net Flow bar: support your existing IDs ---- */
+/* Wrapper (create a wrapper div if you don't have one; otherwise it's fine to style the bar directly) */
+.flow{                         /* wrapper line */
+  position:relative;
+  height:6px;
+  width: min(680px, 64vw);
+  max-width: 100%;
+  border-radius:999px;
+  background:#122030;
+  border:1px solid var(--stroke);
+  overflow:hidden;
+}
+
+/* If your HTML has #flowBar as the moving needle, style it here */
+#flowBar{
+  display:block;
+  height:100%;
+  width:50%;                  /* JS will update width */
+  background: linear-gradient(90deg, #ff7a86 0%, #c8cbd1 50%, #67e0a3 100%);
+  transition: width .35s ease;
+}
+
+/* Keep the Net Flow label next to the bar neatly */
+.flowline{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+/* Place the flow line under the inline metrics (adjust if your HTML differs) */
+.flowline { margin-top:8px; }
+
+/* Bottom dock cards always on top of canvas and not overlapping */
+.dock{
+  position:fixed;
+  left:0; right:0; bottom:14px;
+  z-index:2;
+  display:grid;
+  grid-template-columns: minmax(280px, 520px) minmax(300px, 640px);
+  gap:16px;
+  padding:0 16px;
+}
+
+/* Canvas stays behind everything */
+#org-canvas{
+  position:fixed; inset:0; width:100vw; height:100vh; z-index:0; pointer-events:none;
+}
+
+/* Trades table: left align headers & normal weight */
+.table thead th{
+  text-align:left;
+  font-weight:500;
+  color:var(--ink-dim);
+}
+.type-feed { color:var(--ok); font-weight:400; }
+.type-starve{ color:var(--warn); font-weight:400; }
+
+/* Mobile tweaks so HUD doesn’t break */
+@media (max-width: 980px){
+  .topbar{ padding:12px; gap:12px; }
+  .inline-metrics{ gap:14px; font-size:13px; }
+  .flow{ width: calc(100vw - 24px); }
+  .dock{ grid-template-columns:1fr; gap:12px; bottom:10px; }
+}
