@@ -36,7 +36,7 @@
   const fmtUSDc  = (n) => `$${Number(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   const fmtTs    = (ts) => new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 
-  // ===== Organism render (mysterious “womb” pulse) =====
+  // ===== Organism render =====
   let t0 = performance.now();
   let health = 0.35, mutation = 0.06;
 
@@ -49,7 +49,6 @@
     mutFill.style.width = (mutation*100)+'%';
   }
   function setFlow(x){
-    // x in [-1,1]  left=starving, right=feeding
     const pct = (x+1)/2;
     flowFill.style.transform = `scaleX(${pct})`;
     flowFill.style.transformOrigin = 'left';
@@ -61,7 +60,6 @@
     const w = canvas.width, h = canvas.height;
     ctx.clearRect(0,0,w,h);
 
-    // large diffuse womb gradient
     const womb = ctx.createRadialGradient(w/2,h/2, 60, w/2,h/2, w*0.5);
     womb.addColorStop(0, `rgba(54,251,209, ${0.18+0.06*Math.sin(t*0.8)})`);
     womb.addColorStop(0.55, `rgba(54,251,209, 0.03)`);
@@ -69,7 +67,6 @@
     ctx.fillStyle = womb;
     ctx.beginPath(); ctx.arc(w/2,h/2,w*0.49,0,Math.PI*2); ctx.fill();
 
-    // core – responsive to health
     const breath = 0.04 + 0.02*Math.sin(t*2.1);
     const r = w*(0.10 + 0.18*health + breath);
     const core = ctx.createRadialGradient(w/2,h/2, r*0.2, w/2,h/2, r);
@@ -82,7 +79,6 @@
   }
   requestAnimationFrame(draw);
 
-  // ambience sparks
   for(let i=0;i<28;i++){
     const li = document.createElement('li');
     li.style.left = (8 + Math.random()*84)+'%';
@@ -94,7 +90,8 @@
 
   // ===== Polling =====
   let sfx = false;
-  let recent = []; // 5m net window
+  let recent = [];
+  const WINDOW_MS = 5*60*1000;
 
   const fmtPriceHealth = (p) => Math.max(.05, Math.min(1, p*10));
 
@@ -106,7 +103,6 @@
       priceLabel.textContent = fmtUSD(j.price || 0);
       updatedLabel.textContent = fmtTs(j.timestamp || Date.now());
 
-      // price nudges target-health, then ease toward it
       const target = fmtPriceHealth(j.price || 0);
       setHealth( health + (target - health)*0.08 );
 
@@ -119,8 +115,6 @@
     }
   }
 
-  const WINDOW_MS = 5*60*1000;
-
   async function pollTrades(){
     try{
       const res = await fetch(`${API}/trades`);
@@ -129,7 +123,6 @@
       let data;
       try { data = JSON.parse(raw); }
       catch {
-        // normalize the pseudo-JSON your backend shows
         const fixed = raw
           .replace(/^ok[^[]*\[/,'[')
           .replace(/,\s*]$/ ,']')
@@ -138,11 +131,9 @@
       }
 
       const list = Array.isArray(data) ? data : (data.trades || []);
-
       tradesBody.innerHTML = '';
       const now = Date.now();
 
-      // push to recent + render rows
       for(const r of list){
         const sideRaw = String(r.side || r.action || '').toUpperCase();
         const side = sideRaw.includes('BUY') ? 'BUY' : 'SELL';
@@ -156,14 +147,14 @@
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="right mono">${fmtTs(ts)}</td>
-          <td>${ side==='BUY' ? '<span class="feed">FEED</span>' : '<span class="starve">STARVE</span>' }</td>
-          <td class="right mono">${fmtUSDc(value)}<br><span class="sub">${amount.toLocaleString()} tokens</span></td>
+          <td>${ side==='BUY' ? '<span class="feed">feed</span>' : '<span class="starve">starve</span>' }</td>
+          <td class="right mono">${fmtUSDc(value)}</td>
           <td class="right mono">${fmtUSD(price)}</td>
         `;
         tradesBody.appendChild(tr);
       }
 
-      // prune old + compute net flow
+      // prune & net flow
       for(let i=recent.length-1;i>=0;i--) if(now - recent[i].ts > WINDOW_MS) recent.splice(i,1);
       let sum=0, denom=0;
       for(const r of recent){
@@ -174,7 +165,6 @@
       const net = denom ? Math.max(-1, Math.min(1, sum/denom)) : 0;
       setFlow(net);
 
-      // gentle health/mutation nudge from flow
       const delta = 0.22 * net;
       setHealth(health + delta);
       setMutation(Math.min(1, mutation + Math.max(0,delta)*0.3));
@@ -195,11 +185,10 @@
     setMutation(Math.min(1, mutation + 0.03));
   });
 
-  setInterval(()=> setHealth(health - 0.01), 10_000); // passive decay
+  setInterval(()=> setHealth(health - 0.01), 10_000);
   setInterval(pollHealth, 6_000);
   setInterval(pollTrades, 6_000);
 
-  // boot
   pollHealth();
   pollTrades();
 })();
