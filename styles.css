@@ -1,3 +1,11 @@
+/* DEBUG — remove after verifying */
+body::before{
+  content:"v9";
+  position:fixed; right:10px; top:10px;
+  background:#00e5ff; color:#001018; font:12px/1.2 ui-sans-serif,system-ui;
+  padding:2px 6px; border-radius:6px; z-index:99999;
+}
+
 :root{
   --bg:#0b0f14;
   /* warm womb palette */
