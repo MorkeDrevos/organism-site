@@ -7,26 +7,27 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Teasing creature (drawn behind everything) -->
-  <canvas id="org-canvas" aria-hidden="true"></canvas>
+
+  <!-- Background organism canvas -->
+  <canvas id="org-canvas"></canvas>
 
   <header class="top">
     <div class="brand">THE ORGANISM</div>
-    <div class="stage" id="stageBadge">Stage 1 · The Cell</div>
+    <div class="stage"><span id="stageBadge">Stage 1 · The Cell</span></div>
   </header>
 
   <main class="grid">
-    <!-- Left: Status + controls + price + net flow -->
-    <section class="panel glass">
-      <div class="status">
-        Status: <span id="status" class="ok">Alive</span> · Heartbeat:
-        <span id="heartbeat" class="ok">Stable</span>
+
+    <!-- Left: status & controls -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>Status: <span id="status" class="ok">Alive</span> · Heartbeat: <span id="heartbeat">Stable</span></div>
       </div>
 
       <div class="controls">
-        <button id="feedBtn" class="btn">⚡︎ Feed</button>
-        <a id="tradeBtn" class="btn ghost" href="#" target="_blank">Open Swap</a>
-        <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
+        <a id="feedBtn" class="btn">⚡ Feed</a>
+        <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener">Open Swap</a>
+        <button id="sfxBtn" class="btn ghost" type="button">🔇 SFX Off</button>
       </div>
 
       <div class="kv">
@@ -38,53 +39,60 @@
           <div class="label">Updated</div>
           <div class="value" id="updatedLabel">—:—:—</div>
         </div>
-        <div class="row flow">
-          <div class="label">Net Flow (5m)</div>
-          <div class="value"><span id="flowLabel">Neutral</span></div>
-          <div class="bar">
-            <div id="flowBar" style="width:50%"></div>
-          </div>
-        </div>
       </div>
+
+      <div class="barline">
+        <div class="barlabel">Net Flow (5m)</div>
+        <div class="bar" id="flowBar"><i id="flowNeedle"></i></div>
+        <div class="barhint" id="flowLabel">Neutral</div>
+      </div>
+
+      <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
     </section>
 
-    <!-- Right top: Vitals -->
+    <!-- Middle: vitals -->
     <section class="panel">
-      <div class="panel-head">
+      <div class="panel-head tight">
         <h3>Vitals <span class="pill live">Live</span></h3>
       </div>
 
       <div class="vital">
-        <div class="v-label">Health</div>
-        <div class="v-bar"><span id="healthBar" style="width:66%"></span></div>
-        <div class="v-num" id="healthNum">66%</div>
+        <div class="vlabel">Health</div>
+        <div class="vbar"><span id="healthBar"></span></div>
+        <div class="vnum"><span id="healthNum">0%</span></div>
       </div>
 
       <div class="vital">
-        <div class="v-label">Mutation</div>
-        <div class="v-bar alt"><span id="mutBar" style="width:6%"></span></div>
-        <div class="v-num" id="mutNum">6%</div>
+        <div class="vlabel">Mutation</div>
+        <div class="vbar"><span id="mutBar"></span></div>
+        <div class="vnum"><span id="mutNum">0%</span></div>
       </div>
 
-      <div class="meta">
-        <div>Decay</div><div id="decayRate">1% / 10m</div>
-        <div>Stage</div><div id="stageNum">1</div>
+      <div class="kv kv2">
+        <div class="row">
+          <div class="label">Decay</div>
+          <div class="value"><span id="decayRate">1%</span> / <span>10m</span></div>
+        </div>
+        <div class="row">
+          <div class="label">Stage</div>
+          <div class="value"><span id="stageNum">1</span></div>
+        </div>
       </div>
     </section>
 
-    <!-- Right bottom: Feeding / Starving table -->
+    <!-- Right: trades -->
     <section class="panel">
-      <div class="panel-head">
+      <div class="panel-head tight">
         <h3>Feeding / Starving <span class="pill live">Live</span></h3>
       </div>
 
       <table class="table">
         <thead>
           <tr>
-            <th class="left">Time</th>
-            <th class="left">Type</th>
-            <th class="left">Value (USD)</th>
-            <th class="left">Price (USD)</th>
+            <th>Time</th>
+            <th>Type</th>
+            <th>Value (USD)</th>
+            <th>Price (USD)</th>
           </tr>
         </thead>
         <tbody id="trades-body">
@@ -92,9 +100,8 @@
         </tbody>
       </table>
     </section>
-  </main>
 
-  <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
+  </main>
 
   <script src="app.js"></script>
 </body>
