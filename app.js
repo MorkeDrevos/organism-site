@@ -1,11 +1,11 @@
-// Frontend: renders a pulsing organism and syncs health/mutation with your backend /health endpoint.
-// If the backend is unreachable, it will keep animating and show an error alert.
+// Frontend: renders a pulsing organism and syncs with backend /health.
+// If backend is unreachable, it keeps animating and shows a warning.
 
 (() => {
   const cfg = window.__CONFIG__ || {};
   const API = cfg.apiBase || "";
 
-  // DOM references
+  // DOM
   const canvas = document.getElementById('organismCanvas');
   const ctx = canvas.getContext('2d');
   const feedBtn = document.getElementById('feedBtn');
@@ -31,13 +31,8 @@
 
   if (cfg.jupiterUrl) tradeBtn.href = cfg.jupiterUrl;
 
-  // local animation state
-  let t = 0;
-  let stage = 1;
-  let health = 100;     // 0..100 (displayed)
-  let mutation = 0;     // 0..100 (displayed)
-  let alive = true;
-  let sfx = false;
+  // animation state
+  let t = 0, stage = 1, health = 100, mutation = 0, alive = true, sfx = false;
 
   function setAlert(text, level) {
     if (!text) { alertBox.className='alert hidden'; alertBox.textContent=''; return; }
@@ -121,14 +116,14 @@
     if (health > 0 && health < 12) hero.classList.add('shake'); else hero.classList.remove('shake');
   }
 
-  // SFX toggle (placeholder)
+  // SFX toggle
   sfxBtn.addEventListener('click', () => {
     sfx = !sfx;
     sfxBtn.textContent = sfx ? '🔊 SFX On' : '🔈 SFX Off';
     sfxBtn.setAttribute('aria-pressed', String(sfx));
   });
 
-  // Backend polling (every 5s). We interpret returned price into health/mutation for display.
+  // Backend polling (every 5s). We interpret returned price into a visual health.
   async function pollBackend() {
     if (!API) return;
 
@@ -137,20 +132,14 @@
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const s = await r.json();
 
-      // Map backend price to a visual "health" (for demo).
-      // You can replace this with real /state values later.
       const price = Number(s.price || 0);
       priceLabel.textContent = fmtUsd(price);
       updatedLabel.textContent = new Date(s.timestamp || Date.now()).toLocaleTimeString();
 
-      // simple mapping: normalize price into 0..100 band with smoothing
       const targetHealth = Math.max(5, Math.min(100, price > 0 ? Math.log10(price*1000 + 1) * 100 : 10));
-      health = health + (targetHealth - health) * 0.25; // ease toward target
-
-      // mutation drifts up a little when price > 0 (demo only)
+      health = health + (targetHealth - health) * 0.25; // ease
       mutation = Math.min(100, mutation + (price > 0 ? 0.6 : 0.1));
 
-      // Stage bump on full mutation
       if (mutation >= 100 && health >= 25) {
         mutation = 0;
         stage += 1;
@@ -171,13 +160,13 @@
     }
   }
 
-  // animation ticker
+  // Animation ticker
   setInterval(() => { t += 50; redraw(); }, 50);
 
-  // Decay label (static for now)
+  // Static label for now
   decayRate.textContent = '1% / 10m';
 
-  // “Feed” button (for now just a micro pulse)
+  // Feed button micro pulse
   feedBtn.addEventListener('click', (ev) => {
     ev.preventDefault();
     orgWrap.style.transform = 'scale(1.02)';
@@ -185,6 +174,5 @@
     log('Manual feed trigger (demo).');
   });
 
-  // Start backend polling
   pollBackend();
 })();
