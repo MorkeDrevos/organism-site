@@ -1,4 +1,4 @@
-/******** Canvas: cinematic “specimen” ********/
+/******** Canvas: cinematic “specimen” (deep black + aqua/magenta glow) ********/
 const canvas = document.getElementById('org-canvas');
 const ctx = canvas.getContext('2d', { alpha:true });
 
@@ -6,54 +6,52 @@ function fit(){ canvas.width = innerWidth; canvas.height = innerHeight; }
 addEventListener('resize', fit); fit();
 
 let t = 0;
-const motes = Array.from({length:24},()=>({
+const motes = Array.from({length:26},()=>({
   x: Math.random()*canvas.width,
   y: Math.random()*canvas.height,
   vx:(Math.random()-.5)*0.22,
   vy:(Math.random()-.5)*0.22,
-  r: 1 + Math.random()*1.6
+  r: 0.9 + Math.random()*1.6
 }));
 
 function draw(){
   t += 0.01;
   const W=canvas.width, H=canvas.height;
-
   ctx.clearRect(0,0,W,H);
 
-  // Haze depends on theme (we just add dynamic vignette here)
+  // Cool womb haze + vignette (kept subtle on deep black)
   const haze = ctx.createRadialGradient(W*0.5, H*0.68, H*0.06, W*0.5, H*0.72, H*0.95);
-  // both themes look fine with a subtle blue-ish glow overlay
-  haze.addColorStop(0,'rgba(30,60,120,.10)');
+  haze.addColorStop(0,'rgba(60,140,160,.10)');
   haze.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=haze; ctx.fillRect(0,0,W,H);
 
-  // Rings
+  // Ripple rings
   ctx.save(); ctx.translate(W*0.5, H*0.7);
   for(let i=0;i<9;i++){
     const R = 60 + i*70 + Math.sin(t*0.35+i)*2.2;
-    ctx.strokeStyle=`rgba(200,200,255,${0.08 - i*0.007})`;
-    ctx.lineWidth=1.2;
+    ctx.strokeStyle=`rgba(140,200,255,${0.10 - i*0.01})`;
+    ctx.lineWidth=1.1;
     ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.stroke();
   }
   ctx.restore();
 
-  // Nucleus
+  // Nucleus glow (neutral white-blue so aqua/magenta UI pops)
   const nx = W*0.5 + Math.sin(t*0.6)*10;
   const ny = H*0.7 + Math.cos(t*0.7)*8;
   const pulse = 26 + Math.sin(t*2)*2;
 
   const glow = ctx.createRadialGradient(nx, ny, 0, nx, ny, 140);
-  glow.addColorStop(0,'rgba(200,220,255,.40)');
-  glow.addColorStop(1,'rgba(200,220,255,0)');
+  glow.addColorStop(0,'rgba(220,235,255,.30)');
+  glow.addColorStop(1,'rgba(220,235,255,0)');
   ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(nx,ny,140,0,Math.PI*2); ctx.fill();
 
   const orb = ctx.createRadialGradient(nx, ny, 0, nx, ny, 52+pulse);
-  orb.addColorStop(0,'rgba(220,245,255,1)');
-  orb.addColorStop(1,'rgba(160,190,230,.07)');
+  orb.addColorStop(0,'rgba(240,248,255,1)');
+  orb.addColorStop(1,'rgba(190,210,240,.06)');
   ctx.fillStyle=orb; ctx.beginPath(); ctx.arc(nx,ny,52+pulse,0,Math.PI*2); ctx.fill();
 
-  // Tether
-  ctx.strokeStyle='rgba(220,230,255,.65)'; ctx.lineWidth=6; ctx.lineCap='round';
+  // Tether (slight aqua tint)
+  ctx.strokeStyle='rgba(95,243,209,.55)'; ctx.lineWidth=6; ctx.lineCap='round';
   ctx.beginPath();
   const cp1x = nx-140, cp1y = ny-80 + Math.sin(t*.9)*16;
   const endx = nx-280 + Math.sin(t*.6)*9, endy = ny-36 + Math.cos(t*.7)*12;
@@ -91,7 +89,6 @@ const tradesBody = document.getElementById('trades-body');
 const sfxBtn = document.getElementById('sfxBtn');
 const feedBtn = document.getElementById('feedBtn');
 const tradeBtn = document.getElementById('tradeBtn');
-const themeBtn = document.getElementById('themeBtn');
 
 /******** Helpers ********/
 const clamp = (v,min=0,max=1)=>Math.max(min,Math.min(max,v));
@@ -108,10 +105,11 @@ function setFlow(x){
   flowLabel.textContent = x>0.12?'Feeding':x<-0.12?'Starving':'Neutral';
 }
 
-/******** Toast renderer (max 3) ********/
+/******** Toast renderer (max 4, no boxes) ********/
+const MAX_TOASTS = 4;
 function renderTrades(items){
   tradesBody.innerHTML='';
-  const rows = items.slice(-3).reverse();
+  const rows = items.slice(-MAX_TOASTS).reverse();
   for(const r of rows){
     const node = document.createElement('div');
     node.className = 'toast';
@@ -125,29 +123,17 @@ function renderTrades(items){
   }
 }
 
-/******** Theme toggle ********/
-themeBtn.addEventListener('click', ()=>{
-  const b = document.body;
-  if (b.classList.contains('theme-cool')) {
-    b.classList.remove('theme-cool'); b.classList.add('theme-warm');
-    themeBtn.textContent = 'Theme: Cool';
-  } else {
-    b.classList.remove('theme-warm'); b.classList.add('theme-cool');
-    themeBtn.textContent = 'Theme: Warm';
-  }
-});
-
 /******** Optional womb SFX ********/
 let AC=null,gain=null;
 function initAudio(){
   if(AC) return;
   AC = new (window.AudioContext||window.webkitAudioContext)();
   // heartbeat
-  const o=AC.createOscillator(), g1=AC.createGain(); o.type='sine'; o.frequency.value=58; g1.gain.value=0.02; o.connect(g1);
+  const o=AC.createOscillator(), g1=AC.createGain(); o.type='sine'; o.frequency.value=58; g1.gain.value=0.018; o.connect(g1);
   // womb noise
   const n=AC.createBufferSource(); const buf=AC.createBuffer(1, AC.sampleRate*2, AC.sampleRate);
-  const ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*0.12;
-  n.buffer=buf; n.loop=true; const g2=AC.createGain(); g2.gain.value=0.03; n.connect(g2);
+  const ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=(Math.random()*2-1)*0.11;
+  n.buffer=buf; n.loop=true; const g2=AC.createGain(); g2.gain.value=0.028; n.connect(g2);
   gain=AC.createGain(); gain.gain.value=0; g1.connect(gain); g2.connect(gain); gain.connect(AC.destination);
   o.start(); n.start();
 }
@@ -157,8 +143,8 @@ sfxBtn.addEventListener('click',()=>{
   else { gain.gain.linearRampToValueAtTime(0.06, AC.currentTime+0.3); sfxBtn.textContent='🔊 SFX On'; }
 });
 
-/******** Simulator (swap later) ********/
-let HEALTH=0.44, MUT=0.06, FLOW=0.0, STAGE=1;
+/******** Simulator (swap with your real endpoints) ********/
+let HEALTH=0.48, MUT=0.07, FLOW=0.0, STAGE=1;
 const simTrades=[];
 function tickSim(){
   const buy = Math.random()>0.55;
@@ -174,9 +160,9 @@ decayRate.textContent='1% / 10m';
 setStage(STAGE); setHealth(HEALTH); setMutation(MUT); setFlow(0.0);
 priceLabel.textContent=fmtUSD(0.01); updatedLabel.textContent=nowHHMMSS();
 
-feedBtn.addEventListener('click', (e)=>{
+document.getElementById('feedBtn').addEventListener('click', (e)=>{
   e.preventDefault();
-  HEALTH = clamp(HEALTH + 0.03); setHealth(HEALTH);
+  HEALTH = clamp(HEALTH + 0.04); setHealth(HEALTH);
   MUT = clamp(MUT + 0.002); setMutation(MUT);
   FLOW = clamp(FLOW + 0.4, -1, 1); setFlow(FLOW);
   simTrades.push({ time:nowHHMMSS(), type:'Feed', valueUsd:(8+Math.random()*24), priceUsd:0.01 });
@@ -193,7 +179,8 @@ setInterval(()=>{
 
 renderTrades(simTrades);
 
-/* Hook real endpoints later:
-   /health -> { price, timestamp, health?, mutation?, stage? }
-   /trades -> [{ time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd, priceUsd }]
+/* ===== Hook real endpoints later =====
+   GET /health -> { price, timestamp, health?, mutation?, stage? }
+   GET /trades -> [{ time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd, priceUsd }]
+   Then call set* & renderTrades(items).
 */
