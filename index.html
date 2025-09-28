@@ -1,85 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>THE ORGANISM — Live Habitat</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Organism</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main class="wrap">
-    <!-- Background layers -->
-    <div class="bg-grid"></div>
-    <div class="bg-noise"></div>
+  <div class="container">
+    <h1>THE ORGANISM</h1>
+    <p id="status">Status: Loading...</p>
+    <p id="price">Price: --</p>
+    <p id="timestamp">Updated: --</p>
 
-    <header class="hero glass">
-      <nav class="top">
-        <span class="brand">THE ORGANISM</span>
-        <span class="badge" id="stageBadge">Stage 1 • The Cell</span>
-      </nav>
-
-      <h1 class="title">THE ORGANISM</h1>
-      <p class="subtitle">
-        Status: <span class="status alive">Alive</span> — Heartbeat: <span id="heartbeatRate">Stable</span> —
-        <em>“Feed it or watch it die.”</em>
-      </p>
-
-      <div class="organism-wrap">
-        <canvas id="organismCanvas" width="520" height="360" aria-label="organism visual"></canvas>
-        <div class="ring ring-1"></div>
-        <div class="ring ring-2"></div>
+    <div class="vital-signs">
+      <h2>Vital Signs</h2>
+      <div class="health-bar">
+        <div id="health-bar"></div>
       </div>
+    </div>
 
-      <div class="ctaRow">
-        <a id="feedBtn" class="btn primary">⚡ FEED THE ORGANISM</a>
-        <a id="tradeBtn" class="btn" target="_blank" rel="noopener">Open Swap</a>
-        <button id="sfxBtn" class="btn ghost" aria-pressed="false">🔈 SFX Off</button>
-      </div>
-    </header>
+    <button onclick="alert('Feeding soon!')">⚡ FEED THE ORGANISM</button>
+  </div>
 
-    <section class="panel glass">
-      <div class="stats">
-        <div class="meter">
-          <div class="meterHead"><span>Health</span><span id="healthPct">100%</span></div>
-          <div class="bar"><div id="healthBar"></div></div>
-        </div>
-        <div class="meter">
-          <div class="meterHead"><span>Mutation Progress</span><span id="mutPct">0%</span></div>
-          <div class="bar"><div id="mutBar"></div></div>
-        </div>
-        <div class="kv">
-          <span class="k">Decay</span><span class="v" id="decayRate">1% / 10m</span>
-          <span class="k">Stage</span><span class="v" id="stageLabel">1</span>
-        </div>
-      </div>
-
-      <div id="alert" class="alert hidden"></div>
-      <ul id="feedLog" class="log"></ul>
-    </section>
-
-    <section class="panel glass">
-      <h2>Mutation Archive</h2>
-      <ol class="archive" id="archive">
-        <li><strong>Stage 1: The Cell</strong> — Born weak, fragile, dependent on constant feeding.</li>
-      </ol>
-    </section>
-
-    <footer class="foot">
-      <p>© The Organism — Experimental art/game interface. Not financial advice.</p>
-    </footer>
-  </main>
-
-  <script>
-    window.__CONFIG__ = {
-      // Replace when live:
-      tokenMint: "REPLACE_ME",
-      jupiterUrl: "https://jup.ag/swap/SOL-REPLACE_ME",
-      apiBase: null // e.g., "https://api.organism.xyz" (optional backend)
-    };
-  </script>
   <script src="app.js"></script>
 </body>
 </html>
