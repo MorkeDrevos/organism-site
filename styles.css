@@ -139,3 +139,13 @@ button:hover {
   text-align: center;
   color: #6f869d;
 }
+
+/* Creature canvas womb */
+#org-canvas {
+  width: 100%;
+  height: auto;
+  max-width: 800px;   /* make creature big */
+  display: block;
+  margin: 0 auto;
+  border-radius: 50%;
+}
