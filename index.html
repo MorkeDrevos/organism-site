@@ -2,94 +2,102 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE ORGANISM — Live Habitat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Background organism -->
+  <!-- ===== Canvas (creature, full-screen behind) ===== -->
   <canvas id="org-canvas"></canvas>
 
-  <!-- ===== Top HUD (slim, single row) ===== -->
+  <!-- ===== Top HUD (one compact row) ===== -->
   <header class="topbar">
-    <div class="left">
-      <div class="brand">THE ORGANISM</div>
-      <span id="stageBadge" class="badge">Stage 1 · The Cell</span>
-      <div class="inline-metrics hide-sm">
-        <span>Status: <span id="status" class="ok">Alive</span></span>
-        <span>•</span>
-        <span>Heartbeat: <span id="heartbeat">Stable</span></span>
-      </div>
+    <div class="brand">THE ORGANISM</div>
+    <div class="chip" id="stageBadge">Stage 1 · The Cell</div>
+
+    <div class="inline-metrics">
+      <span>Status: <span id="status" class="ok">Alive</span></span>
+      <span>·</span>
+      <span>Heartbeat: <span id="heartbeat">Stable</span></span>
     </div>
 
-    <div class="mid">
-      <button id="feedBtn" class="btn">⚡ Feed</button>
+    <nav class="controls">
+      <button id="feedBtn" class="btn ghost">⚡ Feed</button>
       <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
       <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
-    </div>
+    </nav>
 
-    <div class="right">
-      <div class="inline-metrics">
-        <span>Price <span id="priceLabel">$—</span></span>
-        <span>•</span>
-        <span>Updated <span id="updatedLabel">—:—:—</span></span>
-      </div>
-      <div class="flowline">
-        <div class="flow"><span id="flowBar"></span></div>
+    <div class="inline-metrics meter">
+      <span>Price <span id="priceLabel">$—</span></span>
+      <span>·</span>
+      <span>Updated <span id="updatedLabel">--:--:--</span></span>
+      <span class="flowline">
+        <span class="flow">
+          <span id="flowBar"></span>
+        </span>
         <span id="flowLabel" class="muted">Neutral</span>
-      </div>
+      </span>
     </div>
   </header>
 
-  <!-- ===== Bottom dock ===== -->
-  <footer class="dock">
-    <!-- Vitals -->
-    <section class="card vitals">
-      <div class="card-head">
-        <h3>Vitals</h3>
-        <span class="chip live-dot">Live</span>
-      </div>
+  <!-- ===== Bottom dock (Vitals + Trades) ===== -->
+  <main class="dock">
+    <!-- Vitals (compact) -->
+    <section class="card" aria-label="Vitals">
+      <header class="card-head">
+        <h3>Vitals</h3><span class="live-dot">Live</span>
+      </header>
 
       <div class="kv">
         <div class="label">Health</div>
-        <div class="bar thin"><span id="healthBar" style="width:0%"></span></div>
-        <div class="value" id="healthPct">0%</div>
+        <div class="value bars">
+          <div class="bar"><span id="healthBar" style="width:0%"></span></div>
+          <span class="pct" id="healthPct">0%</span>
+        </div>
       </div>
 
       <div class="kv">
         <div class="label">Mutation</div>
-        <div class="bar thin"><span id="mutBar" style="width:0%"></span></div>
-        <div class="value" id="mutPct">0%</div>
+        <div class="value bars">
+          <div class="bar"><span id="mutBar" style="width:0%"></span></div>
+          <span class="pct" id="mutPct">0%</span>
+        </div>
       </div>
 
-      <div class="meta">
-        <div>Decay <span id="decayRate">1% / 10m</span></div>
-        <div>Stage <span id="stageNum">1</span></div>
+      <div class="grid-mini">
+        <div class="mini">
+          <div class="mini-label">Decay</div>
+          <div class="mini-value" id="decayRate">1% / 10m</div>
+        </div>
+        <div class="mini">
+          <div class="mini-label">Stage</div>
+          <div class="mini-value" id="stageNum">1</div>
+        </div>
       </div>
     </section>
 
-    <!-- Trades (compact list) -->
-    <section class="card trades">
-      <div class="card-head">
-        <h3>Feeding / Starving</h3>
-        <span class="chip live-dot">Live</span>
+    <!-- Trades (clean list, left aligned) -->
+    <section class="card" aria-label="Feeding / Starving">
+      <header class="card-head">
+        <h3>Feeding / Starving</h3><span class="live-dot">Live</span>
+      </header>
+
+      <div class="thead">
+        <div class="th">Time</div>
+        <div class="th">Type</div>
+        <div class="th right">Value (USD)</div>
+        <div class="th right">Price (USD)</div>
       </div>
 
-      <div class="list list-head">
-        <div>Time</div>
-        <div>Type</div>
-        <div>Value (USD)</div>
-        <div>Price (USD)</div>
-      </div>
-      <ul id="trades-list" class="list"></ul>
-
-      <div class="list-controls">
-        <button id="moreBtn" class="btn ghost small">Show more</button>
+      <div id="trades-body" class="rows">
+        <!-- rows injected by app.js -->
       </div>
     </section>
+  </main>
+
+  <footer class="foot">
+    © The Organism — Experimental art/game interface. Not financial advice.
   </footer>
-
-  <div class="foot">© The Organism — Experimental art/game interface. Not financial advice.</div>
 
   <script src="app.js"></script>
 </body>
