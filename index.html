@@ -8,112 +8,83 @@
 </head>
 <body>
   <main class="wrap">
-    <section class="panel hero">
-      <div class="hero-head">
+    <header class="topbar">
+      <div class="brand">
         <div class="eyebrow">THE ORGANISM</div>
-        <div class="badge" id="stageBadge">Stage 1 · The Cell</div>
+        <h1>Live Habitat</h1>
       </div>
+      <div class="stagepill" id="stageBadge">Stage 1 · The Cell</div>
+    </header>
 
-      <h1 class="title">THE ORGANISM</h1>
-      <p class="subtitle">
-        Status: <span id="status" class="ok">Alive</span> — Heartbeat: <span id="heartbeat">Stable</span>
-        — <em>“Feed it or watch it die.”</em>
-      </p>
-
-      <canvas id="org-canvas"></canvas>
-
-      <div class="controls">
-        <a id="feedBtn" class="btn" href="#">⚡ FEED THE ORGANISM</a>
-        <a id="tradeBtn" class="btn" href="#" target="_blank" rel="noreferrer">Open Swap</a>
-        <a id="sfxBtn" class="btn" href="#">🔇 SFX Off</a>
-      </div>
-    </section>
-
-    <section class="panel panel-grid">
-      <!-- Vitals -->
-      <div class="box">
-        <h3 class="h">Vitals</h3>
-
-        <div class="kv">
-          <div class="label">Health</div>
-          <div class="value">
-            <div class="bar"><div id="health-bar"></div></div>
+    <section class="grid">
+      <!-- LEFT: Creature + quick summary -->
+      <div class="left">
+        <section class="card hero">
+          <div class="line">
+            Status: <span id="status" class="status ok">Alive</span>
+            <span class="dot"></span>
+            Heartbeat: <span id="heartbeat">Stable</span>
           </div>
-        </div>
 
-        <div class="kv">
-          <div class="label">Mutation Progress</div>
-          <div class="value">
-            <div class="bar"><div id="mut-bar"></div></div>
+          <canvas id="org-canvas" aria-label="Organism"></canvas>
+
+          <div class="quick flex">
+            <a id="feedBtn" class="btn" href="#">⚡ Feed</a>
+            <a id="tradeBtn" class="btn" href="#" target="_blank" rel="noreferrer">Open Swap</a>
+            <a id="sfxBtn" class="btn" href="#">🔇 SFX Off</a>
           </div>
-        </div>
 
-        <div class="kv">
-          <div class="label">Decay</div>
-          <div class="value"><span id="decayRate">1% / 10m</span></div>
-        </div>
-
-        <div class="kv">
-          <div class="label">Stage</div>
-          <div class="value"><span id="stageNum">1</span></div>
-        </div>
-
-        <div class="kv">
-          <div class="label">Price</div>
-          <div class="value"><span id="priceLabel">$—</span></div>
-        </div>
-
-        <div class="kv">
-          <div class="label">Updated</div>
-          <div class="value"><span id="updatedLabel">—:—:—</span></div>
-        </div>
-
-        <div class="kv">
-          <div class="label">Net Flow (5m)</div>
-          <div class="value">
-            <div class="bar flow">
-              <div id="flow-bar"></div>
+          <div class="summary">
+            <div class="kv"><span>Price</span><b id="priceLabel">$—</b></div>
+            <div class="kv"><span>Updated</span><b id="updatedLabel">—:—:—</b></div>
+            <div class="kv flowrow">
+              <span>Net Flow (5m)</span>
+              <div class="flowbar">
+                <div id="flow-bar"></div>
+              </div>
+              <b id="flowLabel">Neutral</b>
             </div>
-            <div class="center muted" id="flowLabel">Neutral</div>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Trades -->
-      <div class="box">
-        <h3 class="h">Trades — Feeding / Starving</h3>
+      <!-- RIGHT: Vitals + Trades (both visible without scrolling the page) -->
+      <div class="right">
+        <section class="card vitals">
+          <h2>Vitals</h2>
+          <div class="kv"><span>Health</span><div class="bar"><div id="health-bar"></div></div></div>
+          <div class="kv"><span>Mutation</span><div class="bar"><div id="mut-bar"></div></div></div>
+          <div class="kv"><span>Decay</span><b id="decayRate">1% / 10m</b></div>
+          <div class="kv"><span>Stage</span><b id="stageNum">1</b></div>
+        </section>
 
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Side</th>
-              <th>Price (USD)</th>
-              <th>Value (USD)<br><span class="sub">(size)</span></th>
-              <th class="right">Time</th>
-            </tr>
-          </thead>
-          <tbody id="trades-body">
-            <!-- rows injected by app.js -->
-          </tbody>
-        </table>
+        <section class="card trades">
+          <div class="head">
+            <h2>Feeding / Starving</h2>
+            <small class="muted">Latest activity</small>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th class="right">Price</th>
+                <th class="right">Value (USD)</th>
+                <th class="right">Time</th>
+              </tr>
+            </thead>
+            <tbody id="trades-body">
+              <!-- rows from app.js -->
+            </tbody>
+          </table>
+        </section>
       </div>
-    </section>
-
-    <!-- Lore / whispers -->
-    <section class="panel">
-      <h3 class="h">Mutation Archive</h3>
-      <ol class="archive" id="archive">
-        <li><strong>Stage 1: The Cell</strong> — Born weak, fragile, dependent on constant feeding.</li>
-      </ol>
     </section>
 
     <footer class="foot">
       © The Organism — Experimental art/game interface. Not financial advice.
     </footer>
   </main>
-
-  <!-- Soft “whisper” overlay (mystery) -->
-  <div id="whispers" aria-hidden="true"></div>
 
   <script src="app.js"></script>
 </body>
