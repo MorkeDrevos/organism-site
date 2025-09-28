@@ -1,343 +1,139 @@
-/* ============================
-   THE ORGANISM — styles.css
-   ============================ */
-
-/* ---- Theme tokens ---- */
-:root{
-  --bg:        #0b1117;
-  --bg-2:      #0e141b;
-  --panel:     #0f1621;
-  --panel-2:   #121b26;
-  --ink:       #cfe2f0;
-  --ink-dim:   #97a8b7;
-  --muted:     #7f91a1;
-  --stroke:    #1d2a36;
-  --glow:      rgba(116, 196, 255, .2);
-  --ok:        #67e0a3;  /* Feed (green) */
-  --warn:      #ff7a86;  /* Starve (red) */
-
-  --radius:    14px;
-  --soft:      16px;
+/* Reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0a0f14;
+  color: #ccd;
+  font-family: system-ui, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ---- Base ---- */
-*{ box-sizing: border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  font: 15px/1.35 Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
-  color: var(--ink);
-  background: radial-gradient(1200px 800px at 50% 10%, #0e1620 0%, #0b1117 35%, #0a1016 60%, #091018 100%);
-  overflow-x: hidden;
-}
-
-/* ---- Fullscreen organism canvas (always behind) ---- */
-#org-canvas{
+/* Creature canvas */
+#org-canvas {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;               /* keep panels above */
-  pointer-events: none;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+  background: radial-gradient(circle at center, rgba(0,40,60,0.4), transparent 70%);
 }
 
-/* ---- Top bar / HUD row ---- */
-.topbar{
+/* Top bar */
+.topbar {
   position: relative;
   z-index: 2;
-  display: grid;
-  grid-template-columns: 1fr auto auto auto 1fr;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 18px;
-  padding: 16px 20px 6px 20px;
 }
-.brand{
-  font-weight: 700;
-  letter-spacing:.02em;
-  color: var(--ink);
-}
-.badge{
-  display:inline-block;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: linear-gradient(180deg,#0e1a23,#0c141b);
-  border: 1px solid var(--stroke);
-  color: var(--ink-dim);
-  font-size: 12px;
-}
+.brand { font-weight: bold; color: #5cf; }
+.badge { opacity: .7; }
 
-/* inline metrics (status, price, updated, net flow label row) */
-.inline-metrics{
-  display:flex;
-  gap:24px;
-  align-items:center;
-  color:var(--ink-dim);
-  font-size:14px;
+/* HUD (middle bar) */
+.hud {
+  position: relative;
+  z-index: 2;
+  padding: 10px 20px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  text-align: center;
 }
-.inline-metrics span{ color:var(--ink); }
-.live-dot{
-  display:inline-block; width:8px; height:8px; border-radius:50%;
-  margin-left:6px; background: #55ee9b; box-shadow:0 0 8px #55ee9b66;
+.hud-left, .hud-center, .hud-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
 }
+.hud-center { flex-direction: row; gap: 10px; justify-content: center; }
 
-/* ---- Buttons ---- */
-.controls{ display:flex; gap:10px; justify-content:center; }
-.btn{
-  appearance:none; border:none; cursor:pointer;
-  border-radius: 10px; padding: 8px 14px;
-  color: var(--ink); background: #152231;
-  border:1px solid var(--stroke);
-  box-shadow: 0 1px 0 #000 inset, 0 0 0 0 rgba(0,0,0,0);
-  transition: transform .05s ease, box-shadow .2s ease, background .2s ease;
+/* Buttons */
+.btn {
+  background: #111a;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
 }
-.btn:hover{ background:#19293b; box-shadow:0 0 24px -12px var(--glow); }
-.btn:active{ transform: translateY(1px); }
-.btn.ghost{ background: #0e1722; }
+.btn.ghost:hover { background: #222a; }
 
-/* ---- Needle bar (Net Flow) ---- */
-.meter{
-  position:relative; height:6px; width: min(680px, 64vw);
-  border-radius:999px; background:#122030; border:1px solid var(--stroke);
-  overflow:hidden;
-}
-.meter .needle{
-  display:block; height:100%; width:50%;
-  background: linear-gradient(90deg, #ff7a86 0%, #c8cbd1 50%, #67e0a3 100%);
-  transition: width .35s ease;
-}
-
-/* ---- Cards (bottom dock panels) ---- */
-.card{
-  background: linear-gradient(180deg, var(--panel), var(--panel-2));
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: 0 10px 40px -24px rgba(0,0,0,.6);
+/* Net Flow line */
+.flowline { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.flow {
+  width: 120px;
+  height: 6px;
+  background: #222;
+  border-radius: 4px;
   overflow: hidden;
 }
-.card-head{
-  display:flex; align-items:center; justify-content:space-between;
-  padding: 12px 16px; border-bottom:1px solid var(--stroke);
-  color: var(--ink-dim);
+.flow span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #0f6, #06f);
+  width: 0%;
+  transition: width .5s ease;
 }
-.card-body{ padding: 14px 16px; }
+#flowLabel { font-size: 13px; opacity: .8; }
 
-/* ---- Bottom dock layout ---- */
-.dock{
-  position: fixed;
-  left: 0; right: 0; bottom: 14px;
-  z-index: 2;
+/* Bottom dock */
+.dock {
+  position: absolute;
+  bottom: 10px;
+  left: 0; right: 0;
   display: grid;
-  grid-template-columns: minmax(280px, 520px) minmax(300px, 640px);
-  gap: 16px;
-  padding: 0 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 20px;
+  z-index: 2;
 }
-.dock .card{ backdrop-filter: blur(4px); }
-
-/* ---- Vitals bars ---- */
-.kv{ display:grid; grid-template-columns: 120px 1fr 64px; gap: 12px; align-items:center; padding:10px 0; }
-.kv + .kv{ border-top:1px dashed #1a2734; }
-.kv .label{ color: var(--ink-dim); }
-.kv .value{ text-align:right; color: var(--ink-dim); }
-
-.bar{
-  position:relative; height:8px; border-radius:999px;
-  background:#111b27; border:1px solid var(--stroke); overflow:hidden;
+.card {
+  background: #0c1016ee;
+  padding: 12px;
+  border-radius: 10px;
 }
-.bar > span{
-  display:block; height:100%; width:0%;
-  background: linear-gradient(90deg,#9fe7ff 0%, #b4f1dd 100%);
-  transition: width .35s ease;
-}
+h3 { font-size: 14px; margin-bottom: 8px; }
 
-/* ---- Table (trades) ---- */
-.table{ width:100%; border-collapse: separate; border-spacing:0; }
-.table thead th{
-  text-align:left; font-weight:500; color:var(--ink-dim);
-  padding:12px 14px; border-bottom:1px solid var(--stroke);
+/* Bars */
+.bar {
+  width: 100%;
+  height: 6px;
+  background: #222;
+  border-radius: 3px;
+  overflow: hidden;
+  display: inline-block;
+  margin: 0 4px;
 }
-.table tbody td{
-  padding:14px 14px; color:var(--ink); font-variant-numeric: tabular-nums;
-  border-bottom:1px solid #162232;
-}
-.table tbody tr:last-child td{ border-bottom:none; }
-
-/* Feed/Starve coloring (no bold) */
-.type-feed{ color: var(--ok); font-weight: 400; }
-.type-starve{ color: var(--warn); font-weight: 400; }
-
-/* ---- Footer ---- */
-.foot{
-  position: fixed; left:0; right:0; bottom: calc(14px + 230px);
-  text-align:center; font-size:12px; color:var(--ink-dim);
-  opacity:.45; pointer-events:none;
+.bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg,#0f9,#09f);
+  width: 0%;
+  transition: width .5s ease;
 }
 
-/* ---- Utilities ---- */
-.center{ text-align:center; }
-.right{ text-align:right; }
-.mono{ font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
-
-/* ---- Responsive ---- */
-@media (max-width: 1200px){
-  .topbar{ grid-template-columns: 1fr auto auto auto; gap:12px; }
+/* Table */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td {
+  text-align: left;
+  padding: 6px;
 }
-@media (max-width: 980px){
-  .topbar{ padding: 12px 12px 4px 12px; }
-  .inline-metrics{ gap:14px; font-size:13px; flex-wrap:wrap; }
-  .meter{ width: calc(100vw - 24px); }
-  .dock{
-    grid-template-columns: 1fr;
-    gap: 12px;
-    bottom: 10px;
-  }
-  .foot{ bottom: calc(10px + 350px); }
-}
+.table thead { background: #151a22; }
 
-/* ---- Little chip labels (“Live”) ---- */
-.chip{
-  display:inline-flex; gap:6px; align-items:center;
-  padding:2px 8px; border-radius:999px; font-size:12px; color:var(--ink-dim);
-  background:#0f1a26; border:1px solid var(--stroke);
-}
-/* ==== HOTFIX: make top HUD stable & center elements ==== */
-.topbar{
-  display:flex;              /* simpler & robust */
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  padding:16px 20px 8px 20px;
-  z-index:2;
-}
-.topbar .brand{ margin-right:8px; }
-.topbar .badge{ margin-left:8px; }
+/* Live dot */
+.live-dot { color: #0f9; margin-left: 4px; }
 
-/* Inline metrics row (Status · Price · Updated · Net Flow label) */
-.inline-metrics{
-  display:flex;
-  align-items:center;
-  gap:20px;
-  flex-wrap:wrap;            /* don’t sprawl on smaller widths */
-  color:var(--ink-dim);
-  font-size:14px;
-}
-
-/* ---- Net Flow bar: support your existing IDs ---- */
-/* Wrapper (create a wrapper div if you don't have one; otherwise it's fine to style the bar directly) */
-.flow{                         /* wrapper line */
-  position:relative;
-  height:6px;
-  width: min(680px, 64vw);
-  max-width: 100%;
-  border-radius:999px;
-  background:#122030;
-  border:1px solid var(--stroke);
-  overflow:hidden;
-}
-
-/* If your HTML has #flowBar as the moving needle, style it here */
-#flowBar{
-  display:block;
-  height:100%;
-  width:50%;                  /* JS will update width */
-  background: linear-gradient(90deg, #ff7a86 0%, #c8cbd1 50%, #67e0a3 100%);
-  transition: width .35s ease;
-}
-
-/* Keep the Net Flow label next to the bar neatly */
-.flowline{
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-/* Place the flow line under the inline metrics (adjust if your HTML differs) */
-.flowline { margin-top:8px; }
-
-/* Bottom dock cards always on top of canvas and not overlapping */
-.dock{
-  position:fixed;
-  left:0; right:0; bottom:14px;
-  z-index:2;
-  display:grid;
-  grid-template-columns: minmax(280px, 520px) minmax(300px, 640px);
-  gap:16px;
-  padding:0 16px;
-}
-
-/* Canvas stays behind everything */
-#org-canvas{
-  position:fixed; inset:0; width:100vw; height:100vh; z-index:0; pointer-events:none;
-}
-
-/* Trades table: left align headers & normal weight */
-.table thead th{
-  text-align:left;
-  font-weight:500;
-  color:var(--ink-dim);
-}
-.type-feed { color:var(--ok); font-weight:400; }
-.type-starve{ color:var(--warn); font-weight:400; }
-
-/* Mobile tweaks so HUD doesn’t break */
-@media (max-width: 980px){
-  .topbar{ padding:12px; gap:12px; }
-  .inline-metrics{ gap:14px; font-size:13px; }
-  .flow{ width: calc(100vw - 24px); }
-  .dock{ grid-template-columns:1fr; gap:12px; bottom:10px; }
-}
-/* ===================== */
-/* NET FLOW (fix & pin)  */
-/* ===================== */
-
-/* Layout for the line containing the bar + label */
-.flowline{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;   /* change to flex-end to right-align */
-  gap:12px;
-  margin:8px 0 0;
-}
-
-/* The bar container */
-.flow{
-  position:relative;
-  height:6px;
-  width: clamp(220px, 42vw, 480px);
-  border-radius:999px;
-  background:#122030;
-  border:1px solid var(--stroke);
-  overflow:hidden;
-}
-
-/* Normalize BOTH possibilities: your element might be #flowBar or .needle */
-#flowBar,
-.needle{
-  display:block;
-  height:100%;
-  width:50%;                    /* JS will animate this */
-  border-radius:999px;
-  background:linear-gradient(90deg,#ff7a86 0%, #cdd3da 50%, #67e0a3 100%);
-  transition: width .35s ease;
-}
-
-/* Label next to the bar */
-#flowLabel{
-  color:var(--ink-dim);
-  font-variant-numeric: tabular-nums;
-  min-width:66px;
-}
-
-/* In case the old style was forcing a 1px line somewhere: */
-.kv .value .needle,
-.kv .value #flowBar{ height:6px !important; }
-
-/* Keep the bottom dock above the canvas */
-.dock{ z-index:2; }
-
-/* Make sure the canvas is behind everything */
-#org-canvas{ z-index:0; pointer-events:none; }
-
-/* Mobile safety */
-@media (max-width: 980px){
-  .flow{ width: clamp(200px, 70vw, 420px); }
+/* Footer */
+.foot {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  font-size: 11px;
+  opacity: .5;
+  text-align: center;
+  padding: 4px;
 }
