@@ -1,5 +1,5 @@
 /********* CONFIG *********/
-const TOKEN_MINT = "YOUR_CA_HERE"; // <- put your Contract Address here
+const TOKEN_MINT = "7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV"; // <- put your Contract Address here
 // If you have a backend ready, set your API root here:
 const API = ""; // e.g. "https://your-backend.onrender.com" or keep "" to use the tiny simulator
 
