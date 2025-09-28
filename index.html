@@ -3,87 +3,88 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>THE ORGANISM — Live Habitat</title>
+  <title>THE ORGANISM — Habitat Console</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="site-head">
+  <!-- fullscreen womb canvas -->
+  <canvas id="org-canvas" aria-hidden="true"></canvas>
+
+  <header class="topbar">
     <div class="brand">
-      <div class="dot"></div>
-      <span>THE ORGANISM</span>
+      <span class="dot live"></span> THE ORGANISM
     </div>
-    <div class="stage">
-      <span id="stageBadge">Stage 1 · The Cell</span>
-    </div>
+    <div class="stage"><span id="stageBadge">Stage 1 · The Cell</span></div>
   </header>
 
-  <!-- HERO (creature chamber) -->
-  <section class="hero">
-    <canvas id="org-canvas"></canvas>
+  <!-- HUD row (always above fold) -->
+  <main class="row">
+    <!-- left: status & actions -->
+    <section class="panel hero">
+      <p class="sub">Status: <span id="status" class="ok">Alive</span> · Heartbeat: <span id="heartbeat">Stable</span></p>
 
-    <!-- Status & controls sit on the hero bottom edge -->
-    <div class="hero-ui">
-      <div class="status">
-        Status: <span id="status" class="ok">Alive</span>
-        · Heartbeat: <span id="heartbeat">Stable</span>
-      </div>
       <div class="controls">
-        <a id="feedBtn" class="btn" href="#">⚡ Feed</a>
+        <button id="feedBtn" class="btn">⚡ Feed</button>
         <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
-        <button id="sfxBtn" class="btn ghost" type="button">🔇 SFX Off</button>
+        <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
       </div>
-      <div class="kv">
-        <div>Price <span id="priceLabel">$—</span></div>
-        <div>Updated <span id="updatedLabel">–:–:–</span></div>
-      </div>
-      <div class="flow">
-        <div class="flow-bar"><span id="flowBar"></span></div>
-        <div id="flowLabel" class="muted">Neutral</div>
-      </div>
-    </div>
-  </section>
 
-  <!-- BELOW THE FOLDLESS: vitals & trades — always visible on laptop -->
-  <main class="info">
-    <section class="card">
-      <div class="card-head">
-        <h3>Vitals <span class="live-dot">Live</span></h3>
+      <div class="kv">
+        <div><span class="label">Price</span><span class="value" id="priceLabel">$—</span></div>
+        <div><span class="label">Updated</span><span class="value" id="updatedLabel">—:—:—</span></div>
       </div>
-      <div class="vitals">
-        <div class="vrow">
-          <label>Health</label>
-          <div class="bar"><span id="healthBar" style="width:0%"></span></div>
-          <div class="vnum"><span id="healthPct">0%</span></div>
-        </div>
-        <div class="vrow">
-          <label>Mutation</label>
-          <div class="bar alt"><span id="mutBar" style="width:0%"></span></div>
-          <div class="vnum"><span id="mutPct">0%</span></div>
-        </div>
-        <div class="grid2">
-          <div class="kvline">Decay <span id="decayRate">1% / 10m</span></div>
-          <div class="kvline">Stage <span id="stageNum">1</span></div>
-        </div>
+
+      <div class="flow">
+        <div class="flow-bar"><i id="flowNeedle" style="width:0%"></i></div>
+        <div class="flow-note" id="flowLabel">Neutral</div>
       </div>
     </section>
 
-    <section class="card">
-      <div class="card-head">
-        <h3>Feeding / Starving <span class="live-dot">Live</span></h3>
-        <div class="thead">
-          <div class="c-time">Time</div>
-          <div class="c-type">Type</div>
-          <div class="c-value">Value (USD)</div>
-          <div class="c-price">Price (USD)</div>
-        </div>
+    <!-- middle: vitals -->
+    <section class="panel vitals">
+      <div class="panel-head">
+        <h3>Vitals</h3><span class="pill live">Live</span>
       </div>
-      <div id="trades-body" class="trades"></div>
+
+      <div class="meter">
+        <label>Health</label>
+        <div class="bar"><i id="health-bar" style="width:50%"></i></div>
+        <span class="pct" id="healthPct">50%</span>
+      </div>
+
+      <div class="meter">
+        <label>Mutation</label>
+        <div class="bar muted"><i id="mut-bar" style="width:6%"></i></div>
+        <span class="pct" id="mutPct">6%</span>
+      </div>
+
+      <div class="kv duo">
+        <div><span class="label">Decay</span><span class="value"><span id="decayRate">1%</span> / 10m</span></div>
+        <div><span class="label">Stage</span><span class="value" id="stageNum">1</span></div>
+      </div>
+    </section>
+
+    <!-- right: trades -->
+    <section class="panel trades">
+      <div class="panel-head">
+        <h3>Feeding / Starving</h3><span class="pill live">Live</span>
+      </div>
+
+      <table class="table">
+        <thead>
+        <tr>
+          <th class="left">Time</th>
+          <th class="left">Type</th>
+          <th class="left">Value (USD)</th>
+          <th class="left">Price (USD)</th>
+        </tr>
+        </thead>
+        <tbody id="trades-body"></tbody>
+      </table>
     </section>
   </main>
 
-  <footer class="foot">
-    © The Organism — Experimental art/game interface. Not financial advice.
-  </footer>
+  <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
 
   <script src="app.js"></script>
 </body>
