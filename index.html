@@ -4,27 +4,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>THE ORGANISM — Live Habitat</title>
-  <link rel="stylesheet" href="styles.css?v=10" />
+  <!-- NEW NAME so cache can't reuse -->
+  <link rel="stylesheet" href="styles-v11.css" />
 </head>
 <body>
-  <!-- Creature canvas lives behind everything -->
+  <!-- Creature canvas behind everything -->
   <canvas id="org-canvas" aria-hidden="true"></canvas>
 
-  <!-- Top status strip (over the canvas) -->
+  <!-- Top status strip -->
   <header class="topbar">
     <div class="brand">THE ORGANISM</div>
     <div class="stage"><span id="stageName">Stage 1 · The Cell</span></div>
   </header>
 
-  <!-- Mid overlay: status line + controls -->
+  <!-- Status line + controls -->
   <section class="status-strip">
     <div class="status-line">
-      Status:
-      <span id="status" class="ok">Alive</span>
-      · Heartbeat:
-      <span id="heartbeat">Stable</span>
+      Status: <span id="status" class="ok">Alive</span> · Heartbeat: <span id="heartbeat">Stable</span>
     </div>
-
     <div class="controls">
       <button id="feedBtn" class="btn">⚡ Feed</button>
       <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
@@ -32,36 +29,30 @@
     </div>
   </section>
 
-  <!-- Mid overlay: price + updated + flow bar -->
+  <!-- Price + updated + Net Flow -->
   <section class="inline-metrics">
     <div>Price <span id="priceLabel">$—</span></div>
     <div>Updated <span id="updatedLabel">—:—:—</span></div>
     <div class="flow-wrap">
-      <div id="flowBar" class="flow">
-        <div id="flowNeedle" class="needle"></div>
-      </div>
+      <div id="flowBar" class="flow"><div id="flowNeedle" class="needle"></div></div>
       <div id="flowLabel" class="flow-label">Neutral</div>
     </div>
   </section>
 
-  <!-- Bottom dock: panels -->
+  <!-- Bottom dock -->
   <main class="dock">
     <section class="panel panel-metrics">
       <h3 class="h">Vitals <span class="live">Live</span></h3>
 
       <div class="kv">
         <div class="label">Health</div>
-        <div class="barline">
-          <div id="healthBar" class="bar"></div>
-        </div>
+        <div class="barline"><div id="healthBar" class="bar"></div></div>
         <div id="healthPct" class="pct">0%</div>
       </div>
 
       <div class="kv">
         <div class="label">Mutation</div>
-        <div class="barline">
-          <div id="mutBar" class="bar thin"></div>
-        </div>
+        <div class="barline"><div id="mutBar" class="bar thin"></div></div>
         <div id="mutPct" class="pct">0%</div>
       </div>
 
@@ -79,7 +70,6 @@
 
     <section class="panel panel-trades">
       <h3 class="h">Feeding / Starving <span class="live">Live</span></h3>
-
       <table class="table">
         <thead>
           <tr>
@@ -89,21 +79,15 @@
             <th class="tr">Price (USD)</th>
           </tr>
         </thead>
-        <tbody id="trades-body">
-          <!-- rows injected by app.js -->
-        </tbody>
+        <tbody id="trades-body"></tbody>
       </table>
     </section>
   </main>
 
-  <footer class="foot">
-    © The Organism — Experimental art/game interface. Not financial advice.
-  </footer>
+  <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
 
-  <script>
-    // Version marker for cache-busting verification
-    console.log("Organism UI v10");
-  </script>
-  <script src="app.js?v=10"></script>
+  <script>console.log('Organism UI v11');</script>
+  <!-- NEW NAME so cache can't reuse -->
+  <script src="app-v11.js"></script>
 </body>
 </html>
