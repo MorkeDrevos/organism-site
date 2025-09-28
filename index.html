@@ -1,24 +1,75 @@
-<!-- Vitals -->
-<section class="card vitals">
-  <h3>Vitals <span class="chip live-dot">Live</span></h3>
-  <div class="stat">
-    <span>Health</span>
-    <div class="bar"><span id="healthBar"></span></div>
-    <div id="healthPct">54%</div>
-  </div>
-  <div class="stat">
-    <span>Mutation</span>
-    <div class="bar"><span id="mutBar"></span></div>
-    <div id="mutPct">6%</div>
-  </div>
-  <div class="stat small">
-    <span>Decay <span id="decayRate">1%</span> / 10m</span>
-    <span>Stage <span id="stageNum">1</span></span>
-  </div>
-</section>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>THE ORGANISM — Live Habitat</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-<!-- Trades (simplified feed) -->
-<section class="card trades">
-  <h3>Feeding / Starving <span class="chip live-dot">Live</span></h3>
-  <ul id="trades-feed" class="feed"></ul>
-</section>
+  <!-- ===== Creature canvas (full-screen background) ===== -->
+  <canvas id="org-canvas"></canvas>
+
+  <!-- ===== Top HUD ===== -->
+  <header class="topbar">
+    <div class="brand">THE ORGANISM</div>
+
+    <div class="chips">
+      <span class="chip" id="stageBadge">Stage 1 · The Cell</span>
+      <span class="chip ok" id="status">Alive</span>
+      <span class="chip" id="heartbeat">Stable</span>
+    </div>
+
+    <div class="controls">
+      <button id="feedBtn" class="btn">⚡ Feed</button>
+      <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
+      <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
+    </div>
+
+    <div class="metrics">
+      <div class="kv">
+        <span class="label">Price</span>
+        <span class="value" id="priceLabel">$0.00</span>
+      </div>
+      <div class="kv">
+        <span class="label">Updated</span>
+        <span class="value" id="updatedLabel">--:--:--</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== Bottom dock (Vitals + Trades feed) ===== -->
+  <footer class="dock">
+    <!-- Vitals -->
+    <section class="card vitals">
+      <h3>Vitals <span class="live-dot">Live</span></h3>
+
+      <div class="stat">
+        <span>Health</span>
+        <div class="bar"><span id="healthBar"></span></div>
+        <div id="healthPct">0%</div>
+      </div>
+
+      <div class="stat">
+        <span>Mutation</span>
+        <div class="bar"><span id="mutBar"></span></div>
+        <div id="mutPct">0%</div>
+      </div>
+
+      <div class="stat small">
+        <span>Decay <span id="decayRate">1%</span> / 10m</span>
+        <span class="right">Stage <span id="stageNum">1</span></span>
+      </div>
+    </section>
+
+    <!-- Trades feed (last 3 only) -->
+    <section class="card trades">
+      <h3>Feeding / Starving <span class="live-dot">Live</span></h3>
+      <ul id="trades-feed" class="feed"></ul>
+    </section>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
