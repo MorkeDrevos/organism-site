@@ -7,103 +7,90 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Fullscreen “womb” background -->
-  <canvas id="org-canvas"></canvas>
+  <!-- Teasing creature (drawn behind everything) -->
+  <canvas id="org-canvas" aria-hidden="true"></canvas>
 
-  <!-- UI overlay -->
-  <header class="bar">
+  <header class="top">
     <div class="brand">THE ORGANISM</div>
-    <div class="stage"><span id="stageBadge">Stage 1 · The Cell</span></div>
+    <div class="stage" id="stageBadge">Stage 1 · The Cell</div>
   </header>
 
-  <main class="row">
-    <!-- Creature panel (transparent chrome) -->
-    <section class="panel creature">
-      <div class="statusline">
-        Status: <span id="status" class="ok">Alive</span> ·
-        Heartbeat: <span id="heartbeat">Stable</span>
+  <main class="grid">
+    <!-- Left: Status + controls + price + net flow -->
+    <section class="panel glass">
+      <div class="status">
+        Status: <span id="status" class="ok">Alive</span> · Heartbeat:
+        <span id="heartbeat" class="ok">Stable</span>
       </div>
 
       <div class="controls">
-        <button id="feedBtn" class="btn">⚡ Feed</button>
-        <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
+        <button id="feedBtn" class="btn">⚡︎ Feed</button>
+        <a id="tradeBtn" class="btn ghost" href="#" target="_blank">Open Swap</a>
         <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
       </div>
 
       <div class="kv">
-        <div class="kv-row">
-          <span class="label">Price</span>
-          <span class="value" id="priceLabel">$—</span>
+        <div class="row">
+          <div class="label">Price</div>
+          <div class="value" id="priceLabel">$—</div>
         </div>
-        <div class="kv-row">
-          <span class="label">Updated</span>
-          <span class="value" id="updatedLabel">—:—:—</span>
+        <div class="row">
+          <div class="label">Updated</div>
+          <div class="value" id="updatedLabel">—:—:—</div>
         </div>
-        <div class="kv-row">
-          <span class="label">Net Flow (5m)</span>
-          <div class="flowbar">
-            <span id="flowBar" style="width:0%"></span>
+        <div class="row flow">
+          <div class="label">Net Flow (5m)</div>
+          <div class="value"><span id="flowLabel">Neutral</span></div>
+          <div class="bar">
+            <div id="flowBar" style="width:50%"></div>
           </div>
-          <span class="flowlabel" id="flowLabel">Neutral</span>
         </div>
       </div>
     </section>
 
-    <!-- Right column -->
-    <section class="stack">
-      <!-- Vitals (lab style) -->
-      <div class="panel glass">
-        <div class="panel-head">
-          <h3>Vitals</h3><span class="chip live">Live</span>
-        </div>
-        <div class="vitals">
-          <div class="meter">
-            <div class="meter-head">
-              <span>Health</span>
-              <span class="mono" id="healthPct">0%</span>
-            </div>
-            <div class="bar"><i id="healthBar" style="width:0%"></i></div>
-          </div>
-
-          <div class="meter">
-            <div class="meter-head">
-              <span>Mutation</span>
-              <span class="mono" id="mutPct">0%</span>
-            </div>
-            <div class="bar mut"><i id="mutBar" style="width:0%"></i></div>
-          </div>
-
-          <div class="kvrow">
-            <span class="label">Decay</span>
-            <span class="mono" id="decayRate">1% / 10m</span>
-          </div>
-          <div class="kvrow">
-            <span class="label">Stage</span>
-            <span class="mono" id="stageNum">1</span>
-          </div>
-        </div>
+    <!-- Right top: Vitals -->
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Vitals <span class="pill live">Live</span></h3>
       </div>
 
-      <!-- Feeding / Starving (live trades) -->
-      <div class="panel glass">
-        <div class="panel-head">
-          <h3>Feeding / Starving</h3><span class="chip live">Live</span>
-        </div>
-
-        <table class="table">
-          <thead>
-            <tr>
-              <th class="left">Time</th>
-              <th class="left">Type</th>
-              <th class="left">Value (USD)</th>
-              <th class="left">Price (USD)</th>
-            </tr>
-          </thead>
-          <tbody id="trades-body">
-            <!-- rows injected by app.js -->
-          </tbody>
-        </table>
+      <div class="vital">
+        <div class="v-label">Health</div>
+        <div class="v-bar"><span id="healthBar" style="width:66%"></span></div>
+        <div class="v-num" id="healthNum">66%</div>
       </div>
+
+      <div class="vital">
+        <div class="v-label">Mutation</div>
+        <div class="v-bar alt"><span id="mutBar" style="width:6%"></span></div>
+        <div class="v-num" id="mutNum">6%</div>
+      </div>
+
+      <div class="meta">
+        <div>Decay</div><div id="decayRate">1% / 10m</div>
+        <div>Stage</div><div id="stageNum">1</div>
+      </div>
+    </section>
+
+    <!-- Right bottom: Feeding / Starving table -->
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Feeding / Starving <span class="pill live">Live</span></h3>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="left">Time</th>
+            <th class="left">Type</th>
+            <th class="left">Value (USD)</th>
+            <th class="left">Price (USD)</th>
+          </tr>
+        </thead>
+        <tbody id="trades-body">
+          <!-- rows injected by app.js -->
+        </tbody>
+      </table>
     </section>
   </main>
 
