@@ -2,72 +2,76 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>THE ORGANISM — Live Habitat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- fullscreen creature canvas (behind everything) -->
+  <canvas id="org-canvas"></canvas>
 
-  <!-- ===== Top bar ===== -->
+  <!-- ===== Top HUD ===== -->
   <header class="topbar">
     <div class="brand">THE ORGANISM</div>
-    <div class="badge" id="stageBadge">Stage 1 · The Cell</div>
-    <div class="controls">
-      <button id="feedBtn" class="btn">⚡ Feed</button>
-      <a id="tradeBtn" href="#" target="_blank" rel="noopener" class="btn ghost">Open Swap</a>
-      <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
+    <div class="right chips">
+      <span class="chip" id="stageBadge">Stage 1 · The Cell</span>
     </div>
   </header>
 
-  <!-- ===== Labels row ===== -->
-  <div class="labels">
-    <div class="inline-metrics">
-      <span>Status: <span id="status">Alive</span></span> ·
-      <span>Heartbeat: <span id="heartbeat">Stable</span></span>
+  <!-- compact metrics row (kept narrow so it doesn’t sprawl) -->
+  <section class="inline-metrics">
+    <div class="kv">
+      <span>Status:</span>
+      <span id="status" class="ok">Alive</span>
+      <span> · Heartbeat:</span>
+      <span id="heartbeat">Stable</span>
     </div>
-    <div class="metrics">
+
+    <div class="controls">
+      <button id="feedBtn" class="btn">⚡ Feed</button>
+      <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
+      <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
+    </div>
+
+    <div class="kv right mono">
       <div>Price <span id="priceLabel">$—</span></div>
       <div>Updated <span id="updatedLabel">—:—:—</span></div>
     </div>
-    <div class="flowline">
-      <div class="flow">
-        <span id="flowBar" class="needle"></span>
-      </div>
-      <span id="flowLabel">Neutral</span>
-    </div>
+  </section>
+
+  <!-- Net Flow line (5m) -->
+  <div class="flowline">
+    <div class="flow"><span id="flowBar" class="meter"></span></div>
+    <span id="flowLabel" class="muted">Neutral</span>
   </div>
 
-  <!-- ===== Creature canvas ===== -->
-  <canvas id="org-canvas"></canvas>
+  <!-- ===== Bottom Dock (Vitals + Feeding) ===== -->
+  <section class="dock">
+    <div class="card">
+      <div class="card-head">
+        <h3>Vitals <span class="live-dot">● Live</span></h3>
+      </div>
+      <div class="row">
+        <div class="kv label">Health</div>
+        <div class="bar"><span id="healthBar" style="width:0%"></span></div>
+        <div class="pct mono" id="healthPct">0%</div>
+      </div>
+      <div class="row">
+        <div class="kv label">Mutation</div>
+        <div class="bar"><span id="mutBar" style="width:0%"></span></div>
+        <div class="pct mono" id="mutPct">0%</div>
+      </div>
 
-  <!-- ===== Bottom dock ===== -->
-  <main class="dock">
-    <!-- Vitals -->
-    <section class="card">
-      <h3>Vitals <span class="chip">Live <span class="live-dot">●</span></span></h3>
-      <div class="kv">
-        <span class="label">Health</span>
-        <div id="healthBar" class="bar"><span></span></div>
-        <span id="healthPct">0%</span>
+      <div class="labels">
+        <div class="kv"><span>Decay</span><span id="decayRate" class="mono">1% / 10m</span></div>
+        <div class="kv"><span>Stage</span><span id="stageNum" class="mono">1</span></div>
       </div>
-      <div class="kv">
-        <span class="label">Mutation</span>
-        <div id="mutBar" class="bar"><span></span></div>
-        <span id="mutPct">0%</span>
-      </div>
-      <div class="kv">
-        <span class="label">Decay</span>
-        <span id="decayRate">1% / 10m</span>
-      </div>
-      <div class="kv">
-        <span class="label">Stage</span>
-        <span id="stageNum">1</span>
-      </div>
-    </section>
+    </div>
 
-    <!-- Feeding / Starving -->
-    <section class="card">
-      <h3>Feeding / Starving <span class="chip">Live <span class="live-dot">●</span></span></h3>
+    <div class="card">
+      <div class="card-head">
+        <h3>Feeding / Starving <span class="live-dot">● Live</span></h3>
+      </div>
       <table class="table">
         <thead>
           <tr>
@@ -77,20 +81,13 @@
             <th>Price (USD)</th>
           </tr>
         </thead>
-        <tbody id="trades-body">
-          <!-- filled by JS -->
-        </tbody>
+        <tbody id="trades-body"></tbody>
       </table>
-    </section>
-  </main>
+    </div>
+  </section>
 
-  <!-- ===== Footer ===== -->
-  <footer class="foot">
-    © The Organism — Experimental art/game interface. Not financial advice.
-  </footer>
+  <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
 
-  <!-- ===== Scripts ===== -->
   <script src="app.js"></script>
-  <script src="womb.js"></script>
 </body>
 </html>
