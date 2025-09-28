@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>THE ORGANISM — Lab HUD</title>
+  <title>THE ORGANISM — Habitat Console</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="theme-cool">
-  <!-- Canvas: organism lives behind everything -->
-  <canvas id="org-canvas"></canvas>
+  <!-- Creature chamber lives behind all UI -->
+  <canvas id="org-canvas" aria-hidden="true"></canvas>
 
-  <!-- Top status ribbon -->
+  <!-- Top lab ribbon -->
   <header class="ribbon">
     <div class="brand">THE ORGANISM</div>
-    <div class="stage chip"><span id="stageText">Stage 1 · The Cell</span></div>
+    <div class="stage chip mono"><span id="stageText">Stage 1 · The Cell</span></div>
 
     <div class="inline">
-      <span>Status: <b id="status">Alive</b></span>
-      <span>Heartbeat: <b id="heartbeat">Stable</b></span>
+      <span>Status: <span id="status">Alive</span></span>
+      <span>Heartbeat: <span id="heartbeat">Stable</span></span>
     </div>
 
     <div class="inline mono right">
@@ -33,38 +33,50 @@
       <button id="feedBtn" class="btn ghost">⚡ Feed</button>
       <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener">Open Swap</a>
       <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
+      <button id="themeBtn" class="btn ghost">Lab Lights</button>
     </div>
   </header>
 
-  <!-- Floating cards -->
+  <!-- Bottom cards -->
   <section class="cards">
-    <!-- Vitals -->
+    <!-- Vitals + Traits -->
     <article class="card vitals">
       <header class="card-title">
         <div class="dot live"></div> Vitals
       </header>
+
       <div class="kv">
         <span>Health</span>
-        <div class="bar"><span id="healthBar" style="width:0%"></span></div>
-        <span id="healthNum" class="pct">0%</span>
+        <div class="bar"><span id="healthBar"></span></div>
+        <span id="healthNum" class="pct mono">0%</span>
 
         <span>Mutation</span>
-        <div class="bar"><span id="mutBar" style="width:0%"></span></div>
-        <span id="mutNum" class="pct">0%</span>
+        <div class="bar"><span id="mutBar"></span></div>
+        <span id="mutNum" class="pct mono">0%</span>
 
         <span>Decay</span>
         <span id="decayText" class="mono muted">1% / 10m</span>
+
         <span>Stage</span>
         <span id="stageNum" class="mono">1</span>
       </div>
+
+      <div class="traits">
+        <div class="traits-title">Traits</div>
+        <div id="traitsRow" class="traits-row">
+          <!-- dynamic badges -->
+        </div>
+      </div>
     </article>
 
-    <!-- Trades (ticker of up to 3 pills) -->
+    <!-- Trades (3-pill ticker) -->
     <article class="card feed">
       <header class="card-title">
         <div class="dot live"></div> Feeding / Starving
       </header>
-      <div id="tradePills" class="pill-ticker"><!-- pills injected here --></div>
+
+      <div id="tradePills" class="pill-ticker"><!-- pills injected --></div>
+
       <footer class="legend">
         <span class="key feed">Feed</span>
         <span class="key starve">Starve</span>
