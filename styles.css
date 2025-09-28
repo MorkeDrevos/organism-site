@@ -44,9 +44,11 @@ body{
 .grid{
   position:relative; z-index:2;
   display:grid;
-  grid-template-columns: 2fr 1fr 1fr;
+  grid-template-columns: 1.2fr 0.9fr 0.9fr; /* narrower panels */
   gap:20px;
   padding:0 24px 24px;
+  max-width:1400px;      /* don’t cover whole screen */
+  margin:0 auto;         /* center horizontally */
 }
 
 /* Panels */
