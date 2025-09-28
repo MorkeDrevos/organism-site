@@ -6,18 +6,20 @@
   <title>THE ORGANISM — Specimen Viewer</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body class="theme-cool">
   <!-- Creature chamber -->
   <canvas id="org-canvas" aria-hidden="true"></canvas>
 
   <!-- Top strip -->
   <header class="top">
     <div class="brand">THE ORGANISM</div>
+
     <div class="chips">
       <span id="stageBadge" class="chip">Stage 1 · The Cell</span>
       <span id="status" class="chip ok">Alive</span>
       <span id="heartbeat" class="chip">Heartbeat: Stable</span>
     </div>
+
     <div class="rightside">
       <div class="micro">
         <span>Price</span><span id="priceLabel">$—</span>
@@ -28,34 +30,39 @@
       <button id="feedBtn" class="btn">⚡ Feed</button>
       <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
       <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
+      <button id="themeBtn" class="btn ghost">Theme: Warm</button>
     </div>
   </header>
 
-  <!-- Centered ring HUD -->
+  <!-- Center ring HUD -->
   <section class="ring-hud" aria-live="polite">
     <div class="gauge health">
       <div class="label">Health <span id="healthPct">0%</span></div>
       <div class="ring"></div>
     </div>
+
     <div class="nucleus">
       <div class="title">Specimen</div>
+
       <div class="mini-grid">
         <div class="mini"><span class="k">Decay</span><span id="decayRate" class="v">1% / 10m</span></div>
         <div class="mini"><span class="k">Stage</span><span id="stageNum" class="v">1</span></div>
       </div>
+
       <div class="flowline">
         <span class="k">Net Flow (5m)</span>
         <div class="flow"><span id="flowBar"></span></div>
         <span id="flowLabel" class="t">Neutral</span>
       </div>
     </div>
+
     <div class="gauge mut">
       <div class="label">Mutation <span id="mutPct">0%</span></div>
       <div class="ring"></div>
     </div>
   </section>
 
-  <!-- Right toast stack: Feed / Starve -->
+  <!-- Right toast stack -->
   <aside class="stack card">
     <header>Feeding / Starving <span class="live-dot">Live</span></header>
     <div id="trades-body" class="toasts"></div>
