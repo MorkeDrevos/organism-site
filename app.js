@@ -1,196 +1,214 @@
-// ====== CONFIG ======
-const API = "https://organism-backend.onrender.com"; // change if your backend URL differs
+/***** CONFIG *****/
+const API = "https://organism-backend.onrender.com"; // ← your backend base URL
+const POLL_HEALTH_MS = 6000;
+const POLL_TRADES_MS = 6000;
 
-// ====== Canvas setup (fullscreen womb) ======
+/***** Canvas (fullscreen womb) *****/
 const canvas = document.getElementById("org-canvas");
 const ctx = canvas.getContext("2d", { alpha: true });
 
-function resizeCanvas() {
+function resizeCanvas(){
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 }
 window.addEventListener("resize", resizeCanvas);
 resizeCanvas();
 
-// ====== Teasing layout: center slightly offset so glow spills offscreen ======
+/***** Teasing organism (brighter, visible behind panels) *****/
 function drawOrganism() {
   const W = canvas.width, H = canvas.height;
   const t = performance.now() / 1000;
 
-  // clear with very soft vignette
   ctx.clearRect(0, 0, W, H);
 
-  // off-center to tease
-  const cx = W * 0.42;
-  const cy = H * 0.44;
+  // place slightly left/center so it peeks behind both panels
+  const cx = W * 0.36;
+  const cy = H * 0.46;
 
-  // size relative to viewport
-  const base = Math.min(W, H) * 0.24;
-  const pulse = base + Math.sin(t * 1.3) * (base * 0.08);
+  const base = Math.min(W, H) * 0.30;
+  const pulse = base + Math.sin(t * 1.25) * (base * 0.10);
 
-  // nucleus glow
-  const g = ctx.createRadialGradient(cx, cy, base * 0.08, cx, cy, pulse);
-  g.addColorStop(0, "rgba(120,255,235,0.95)");
-  g.addColorStop(0.4, "rgba(90,220,230,0.35)");
-  g.addColorStop(1, "rgba(10,25,40,0)");
+  // core glow
+  let g = ctx.createRadialGradient(cx, cy, base * 0.08, cx, cy, pulse);
+  g.addColorStop(0.0, "rgba(130,255,240,0.98)");
+  g.addColorStop(0.35,"rgba(110,230,240,0.45)");
+  g.addColorStop(1.0, "rgba(10,22,35,0.00)");
   ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(cx, cy, pulse, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, pulse, 0, Math.PI*2); ctx.fill();
 
-  // concentric “womb” rings drifting
+  // inner definition
+  g = ctx.createRadialGradient(cx, cy, 0, cx, cy, base * 0.42);
+  g.addColorStop(0, "rgba(160,255,245,0.25)");
+  g.addColorStop(1, "rgba(40,70,95,0.00)");
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, base * 0.55, 0, Math.PI*2); ctx.fill();
+
+  // womb rings
   ctx.lineWidth = 1.2;
-  for (let i = 1; i <= 5; i++) {
-    ctx.strokeStyle = `rgba(180,220,255,${0.06 + 0.04*Math.sin(t*0.5 + i)})`;
-    ctx.beginPath();
-    ctx.arc(cx, cy, base * (0.6 + i*0.35) + Math.sin(t*0.6 + i)*4, 0, Math.PI * 2);
-    ctx.stroke();
+  for (let i = 1; i <= 6; i++) {
+    const r = base * (0.6 + i*0.36) + Math.sin(t*0.5 + i)*5;
+    ctx.strokeStyle = `rgba(185,225,255,${0.08 + 0.05*Math.sin(t*0.35 + i)})`;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.stroke();
   }
 
-  // drifting specks
-  for (let i=0;i<14;i++){
-    const ang = t*0.25 + i*0.45;
-    const r = base * (1.2 + (i%5)*0.25);
+  // floating motes
+  for (let i=0;i<16;i++){
+    const ang = t*0.22 + i*0.47;
+    const r = base * (1.15 + (i%5)*0.26);
     const px = cx + Math.cos(ang) * r;
-    const py = cy + Math.sin(ang*1.1) * r;
-    ctx.fillStyle = "rgba(190,235,255,0.22)";
-    ctx.beginPath(); ctx.arc(px, py, 2.2 + (i%3)*0.6, 0, Math.PI*2); ctx.fill();
+    const py = cy + Math.sin(ang*1.07) * r;
+    const a = 0.22 + 0.08*Math.sin(t*0.9 + i);
+    ctx.fillStyle = `rgba(200,240,255,${a})`;
+    ctx.beginPath(); ctx.arc(px, py, 2.2 + (i%3)*0.7, 0, Math.PI*2); ctx.fill();
   }
 
   requestAnimationFrame(drawOrganism);
 }
-drawOrganism();
+requestAnimationFrame(drawOrganism);
 
-// ====== DOM refs ======
-const priceLabel   = document.getElementById("priceLabel");
+/***** DOM refs *****/
+const priceLabel = document.getElementById("priceLabel");
 const updatedLabel = document.getElementById("updatedLabel");
-const flowBar      = document.getElementById("flowBar");
-const flowLabel    = document.getElementById("flowLabel");
-const healthBar    = document.getElementById("healthBar");
-const healthPct    = document.getElementById("healthPct");
-const mutBar       = document.getElementById("mutBar");
-const mutPct       = document.getElementById("mutPct");
-const decayRate    = document.getElementById("decayRate");
-const stageNum     = document.getElementById("stageNum");
-const statusSpan   = document.getElementById("status");
-const tradesBody   = document.getElementById("trades-body");
+const flowLabel = document.getElementById("flowLabel");
+const flowBar = document.getElementById("flowBar");
+const healthBar = document.getElementById("healthBar");
+const healthNum = document.getElementById("healthNum");
+const mutBar = document.getElementById("mutBar");
+const mutNum = document.getElementById("mutNum");
+const stageNum = document.getElementById("stageNum");
+const tradesBody = document.getElementById("trades-body");
 
-// ====== Small sim state to animate vitals ======
-let health = 0.75;           // 0..1
-let mutation = 0.04;         // 0..1
-const DECAY_PER_TICK = 0.001; // ~0.1% per tick
-decayRate.textContent = "1% / 10m"; // label
-stageNum.textContent = "1";
+/***** Helpers *****/
+const fmtUSD = n => n == null ? "$—" : `$${Number(n).toFixed(4)}`.replace(/(\.\d*[1-9])0+$/,'$1');
+const fmtUSD2 = n => n == null ? "$—" : `$${Number(n).toFixed(2)}`;
+const pad2 = n => String(n).padStart(2,"0");
+const timeHHMMSS = ts => {
+  const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+};
 
-function setHealth(h){
-  health = Math.max(0, Math.min(1, h));
-  healthBar.style.width = (health*100).toFixed(0) + "%";
-  healthPct.textContent = (health*100).toFixed(0) + "%";
-}
-function setMutation(m){
-  mutation = Math.max(0, Math.min(1, m));
-  mutBar.style.width = (mutation*100).toFixed(0) + "%";
-  mutPct.textContent = (mutation*100).toFixed(0) + "%";
-}
-setHealth(health);
-setMutation(mutation);
+/***** State (simple) *****/
+let lastHealth = 0.66;   // 0..1
+let lastMut = 0.06;      // 0..1
+let windowFlow = 0.5;    // 0..1 where 0.5 neutral, < starving, > feeding
+const FLOW_SMOOTH = 0.15;
 
-// ====== Helpers ======
-const fmtUSD = n => `$${Number(n).toLocaleString(undefined, {minimumFractionDigits:4, maximumFractionDigits:6})}`;
-const fmtMoney = n => `$${Number(n).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-function nowHHMMSS(){
-  const d = new Date();
-  const p2 = v => String(v).padStart(2,'0');
-  return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
-}
-
-// ====== Data polling ======
-async function fetchHealth(){
-  try {
-    const r = await fetch(`${API}/health`, { cache: "no-store" });
-    const j = await r.json();
-    const price = j.price ?? 0;
-    priceLabel.textContent = fmtUSD(price);
-    updatedLabel.textContent = nowHHMMSS();
-
-    // nudge health a bit by price change magnitude (toy model)
-    const target = Math.max(0, Math.min(1, 0.2 + Math.log10(1 + price * 8000) / 2.6));
-    setHealth(health * 0.92 + target * 0.08);
-
-    statusSpan.textContent = "Alive";
-    statusSpan.className = "ok";
-  } catch (e) {
-    statusSpan.textContent = "Offline";
-    statusSpan.className = "";
-  }
-}
-
-let lastTradesTs = 0;
-async function fetchTrades(){
+/***** Poll health (price) *****/
+async function pollHealth(){
   try{
-    const r = await fetch(`${API}/trades`, { cache: "no-store" });
-    const arr = await r.json();
+    const r = await fetch(`${API}/health`, { cache:"no-store" });
+    const j = await r.json();
 
-    // Expected each item: { time: "<ISO or ms>", type: "feed"|"starve", valueUsd: number, priceUsd: number }
-    tradesBody.innerHTML = "";
+    // Expect { price: number, timestamp: ms }
+    if (typeof j.price === "number") {
+      priceLabel.textContent = fmtUSD(j.price);
+    } else {
+      priceLabel.textContent = "$—";
+    }
+    updatedLabel.textContent = timeHHMMSS(j.timestamp ?? Date.now());
 
-    let buys=0, sells=0;
-
-    arr.forEach(it=>{
-      const t = typeof it.time === "number" ? new Date(it.time) : new Date(it.time);
-      const hh = String(t.getHours()).padStart(2,"0");
-      const mm = String(t.getMinutes()).padStart(2,"0");
-      const ss = String(t.getSeconds()).padStart(2,"0");
-      const hhmmss = `${hh}:${mm}:${ss}`;
-
-      const type = (it.type || "").toLowerCase() === "buy" || (it.type||"") === "feed" ? "feed" :
-                   (it.type || "").toLowerCase() === "sell" ? "starve" : (it.type||"").toLowerCase();
-
-      if (type === "feed") buys += Number(it.valueUsd||0);
-      if (type === "starve") sells += Number(it.valueUsd||0);
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${hhmmss}</td>
-        <td class="${type==='feed'?'type-feed':'type-starve'}">${type === "feed" ? "Feed" : "Starve"}</td>
-        <td>${fmtMoney(it.valueUsd || 0)}</td>
-        <td>${fmtUSD(it.priceUsd || 0)}</td>
-      `;
-      tradesBody.appendChild(tr);
-    });
-
-    // Net flow bar (left = starving, right = feeding)
-    const net = buys - sells; // USD over window
-    const scale = Math.max(-1, Math.min(1, net / 50)); // clamp ±$50 window
-    const pct = (50 + scale * 50); // 0..100
-    flowBar.style.width = `${pct}%`;
-    flowBar.style.marginLeft = `${Math.min(pct,0)}%`;
-    flowLabel.textContent = scale > 0.05 ? "Feeding" : scale < -0.05 ? "Starving" : "Neutral";
-
-    // health tiny nudge by net
-    setHealth(health + scale * 0.004);
+    // nudge health slightly by price momentum (demo)
+    if (typeof j.price === "number") {
+      const target = Math.max(0, Math.min(1, 0.2 + Math.log10(1 + j.price*200))));
+      lastHealth = lastHealth*(1-FLOW_SMOOTH) + target*FLOW_SMOOTH;
+    }
+    updateVitals();
 
   }catch(e){
-    // swallow; table stays as-is
+    // leave previous values
   }
 }
 
-// Decay – gentle heartbeat
-function tick(){
-  setHealth(health - DECAY_PER_TICK);
-  setMutation(mutation * 0.995 + 0.0008 * Math.random());
+/***** Poll trades *****/
+let recent = []; // keep last ~5 minutes
+const WINDOW_MS = 5*60*1000;
+
+async function pollTrades(){
+  try{
+    const r = await fetch(`${API}/trades`, { cache:"no-store" });
+    const data = await r.json();
+
+    // Accept either our normalized shape OR a lean shape:
+    // [{ time, type: 'feed'|'starve', valueUsd, priceUsd }]
+    // OR Jupiter-ish: { side:'BUY'|'SELL', price:number, amount:number, ts:number }
+    let list = Array.isArray(data) ? data : data?.items || data?.trades || [];
+
+    const parsed = list.map(x => {
+      const type = (x.type ?? x.side ?? "").toString().toLowerCase() === "buy" ? "feed"
+                 : (x.type ?? x.side ?? "").toString().toLowerCase() === "sell" ? "starve"
+                 : (x.type ?? "").toString().toLowerCase();
+      const priceUsd = x.priceUsd ?? x.price ?? null;
+      const valueUsd = x.valueUsd ?? (priceUsd && x.amount ? priceUsd * x.amount : null);
+      const time = x.time ?? x.ts ?? Date.now();
+      return { time, type, valueUsd, priceUsd };
+    }).filter(x => x.type === "feed" || x.type === "starve");
+
+    // merge & clamp to 5m window
+    const now = Date.now();
+    recent = [...parsed, ...recent].sort((a,b)=>b.time-a.time)
+              .filter(x => now - x.time <= WINDOW_MS).slice(0,50);
+
+    // compute flow: buys add, sells subtract
+    const sum = recent.reduce((acc,x)=> acc + ((x.type==="feed"?1:-1) * (x.valueUsd || 0)), 0);
+    // map flow to 0..1 bar around 0.5
+    const range = 50; // $ range that fills the bar
+    const net = Math.max(0, Math.min(1, 0.5 + (sum / range) * 0.5));
+    windowFlow = windowFlow*(1-FLOW_SMOOTH) + net*FLOW_SMOOTH;
+    flowBar.style.width = `${windowFlow*100}%`;
+    flowLabel.textContent = windowFlow>0.53 ? "Feeding" : windowFlow<0.47 ? "Starving" : "Neutral";
+
+    // nudge health by trades
+    const delta = (net - 0.5) * 0.12;
+    lastHealth = Math.max(0, Math.min(1, lastHealth + delta));
+    lastMut = Math.max(0, Math.min(1, lastMut + Math.abs(delta)*0.1));
+
+    updateVitals();
+    renderTrades();
+
+  }catch(e){
+    // quiet fallback
+  }
 }
 
-// Wire buttons (placeholders)
-document.getElementById("feedBtn").addEventListener("click", () => {
-  setHealth(Math.min(1, health + 0.04));
+/***** Renderers *****/
+function updateVitals(){
+  healthBar.style.width = `${Math.round(lastHealth*100)}%`;
+  healthNum.textContent = `${Math.round(lastHealth*100)}%`;
+  mutBar.style.width = `${Math.round(lastMut*100)}%`;
+  mutNum.textContent = `${Math.round(lastMut*100)}%`;
+}
+
+function renderTrades(){
+  tradesBody.innerHTML = "";
+  // newest first; show up to 10
+  recent.slice(0,10).forEach(row=>{
+    const tr = document.createElement("tr");
+    const typeClass = row.type==="feed" ? "type-feed" : "type-starve";
+    tr.innerHTML = `
+      <td class="left">${timeHHMMSS(row.time)}</td>
+      <td class="left ${typeClass}">${row.type[0].toUpperCase()+row.type.slice(1)}</td>
+      <td class="left">${row.valueUsd!=null ? fmtUSD2(row.valueUsd) : "—"}</td>
+      <td class="left">${row.priceUsd!=null ? fmtUSD(row.priceUsd) : "—"}</td>
+    `;
+    tradesBody.appendChild(tr);
+  });
+}
+
+/***** Interactions (demo) *****/
+document.getElementById("sfxBtn").addEventListener("click", e=>{
+  e.preventDefault();
+  const on = e.currentTarget.textContent.includes("Off");
+  e.currentTarget.textContent = on ? "🔊 SFX On" : "🔇 SFX Off";
+});
+document.getElementById("feedBtn").addEventListener("click", e=>{
+  e.preventDefault();
+  lastHealth = Math.min(1, lastHealth + 0.04);
+  updateVitals();
 });
 
-// Schedulers
-setInterval(tick, 1000);
-setInterval(fetchHealth, 6000);
-setInterval(fetchTrades, 6000);
+/***** Schedulers *****/
+setInterval(pollHealth, POLL_HEALTH_MS);
+setInterval(pollTrades, POLL_TRADES_MS);
 
-// Boot
-fetchHealth();
-fetchTrades();
+// initial
+pollHealth();
+pollTrades();
