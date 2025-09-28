@@ -243,3 +243,15 @@ ctx.beginPath();
 ctx.arc(Cx, Cy, baseR * pulse, 0, 2 * Math.PI);
 ctx.fillStyle = `hsla(${hue}, 80%, 55%, 0.25)`;
 ctx.fill();
+
+for (let i = 0; i < 20; i++) {
+  const a = t * 0.2 + i;
+  const r = 200 + 50 * Math.sin(t * 0.3 + i);
+  const x = Cx + Math.cos(a) * r;
+  const y = Cy + Math.sin(a) * r;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 2, 0, 2 * Math.PI);
+  ctx.fillStyle = "rgba(255,255,255,0.2)";
+  ctx.fill();
+}
