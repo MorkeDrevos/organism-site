@@ -2,71 +2,74 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>ORGANISM.ZERO</title>
-  <link rel="stylesheet" href="/styles.css" /> 
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Creature layer -->
+  <canvas id="org-canvas" aria-hidden="true"></canvas>
 
-  <!-- Big title -->
-  <header class="hero-title">
-    <h1>ORGANISM.<span class="zero">ZERO</span></h1>
-  </header>
+  <!-- Hero title -->
+  <div class="hero">
+    <h1>ORGANISM<span>.ZERO</span></h1>
+  </div>
 
-  <!-- Canvas background creature -->
-  <canvas id="org-canvas"></canvas>
-
-  <!-- Left: DEX-style trades -->
-  <aside class="trades">
-    <div class="trades-head">Feeding / Starving <span class="live-dot">Live</span></div>
-    <table class="trades-table">
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Value (USD)</th>
-          <th>Price (USD)</th>
-          <th>Time</th>
-        </tr>
-      </thead>
-      <tbody id="trades-body">
-        <!-- rows injected here -->
-      </tbody>
-    </table>
+  <!-- Left: last 3 trades as vertical pills -->
+  <aside class="left-rail">
+    <div id="tradePills" class="pill-stack">
+      <!-- pills injected -->
+    </div>
   </aside>
 
-  <!-- Right: slim stats -->
-  <aside class="stats">
+  <!-- Right: minimal stats -->
+  <aside class="right-rail">
     <div class="stat">
-      <div class="label">Health</div>
+      <label>Health</label>
       <div class="bar"><span id="healthBar"></span></div>
-      <div class="pct" id="healthPct">0%</div>
+      <div id="healthNum" class="mono pct">0%</div>
     </div>
+
     <div class="stat">
-      <div class="label">Mutation</div>
+      <label>Mutation</label>
       <div class="bar"><span id="mutBar"></span></div>
-      <div class="pct" id="mutPct">0%</div>
+      <div id="mutNum" class="mono pct">0%</div>
     </div>
+
     <div class="traits" id="traitsRow">
-      <!-- future trait chips appear here -->
+      <!-- trait chips injected -->
     </div>
   </aside>
 
-  <!-- Bottom status strip -->
+  <!-- Bottom status bar -->
   <footer class="statusbar">
-    <div class="chip">Stage <span id="stageNum">1</span></div>
-    <div class="chip" id="status">alive</div>
-    <div class="chip" id="heartbeat">stable</div>
-    <div class="chip">$<span id="priceLabel">0.00</span></div>
-    <div class="chip" id="updatedLabel">--:--:--</div>
-    <div class="meter">
-      <span class="meter-label">Net Flow (5m)</span>
-      <div class="needle"><span id="flowBar"></span></div>
+    <div class="slot brand">ORGANISM.ZERO</div>
+
+    <div class="slot info mono">
+      <span>Stage <span id="stageNum">1</span></span>
+      <span class="dot"></span>
+      <span id="status">alive</span>
+      <span class="dot"></span>
+      <span id="heartbeat">stable</span>
     </div>
 
-    <!-- utility actions -->
-    <div class="actions">
+    <div class="slot price mono">
+      <span id="priceLabel">$0.00</span>
+      <span class="sep">•</span>
+      <span id="updatedLabel">--:--:--</span>
+    </div>
+
+    <div class="slot flow">
+      <div class="flowline">
+        <div class="flow"><span id="flowBar"></span></div>
+        <span id="flowLabel" class="mono">neutral</span>
+      </div>
+    </div>
+
+    <div class="slot controls">
       <button id="feedBtn" class="btn">Feed</button>
-      <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener">Open Swap</a>
+      <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
+      <button id="sfxBtn" class="btn ghost" title="Audio">SFX</button>
     </div>
   </footer>
 
