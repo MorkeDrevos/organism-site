@@ -2,113 +2,123 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>THE ORGANISM — Live Habitat</title>
+
+  <!-- External styles only -->
   <link rel="stylesheet" href="styles.css" />
-  <style>
-    /* tiny helpers for the new USD value column */
-    .t-right { text-align:right }
-    .t-mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .muted { opacity:.7 }
-    .buy { color:#4ade80 }     /* green */
-    .sell { color:#f87171 }    /* red */
-    .row { display:grid; grid-template-columns: 92px 1fr 1fr 112px; gap:14px; align-items:center; padding:14px 18px; border-radius:14px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); }
-    .row + .row { margin-top:10px; }
-    .head { opacity:.65; font-size:.9rem; letter-spacing:.02em; }
-    .trades-wrap { padding:18px }
-  </style>
+
+  <!-- Optional frontend config (edit as you like) -->
+  <script>
+    window.__CONFIG__ = {
+      apiBase: "https://organism-backend.onrender.com", // backend base
+      sfx: false
+    };
+  </script>
 </head>
 <body>
   <main class="wrap">
+    <!-- ===== Hero / Canvas ===== -->
     <section class="panel hero">
       <div class="hero-head">
         <div class="eyebrow">THE ORGANISM</div>
-        <div class="badge" id="stageBadge">Stage 1 • The Cell</div>
+        <div class="badge" id="stageBadge">Stage 1 · The Cell</div>
       </div>
 
       <h1 class="title">THE ORGANISM</h1>
       <p class="subtitle">
-        Status: <span id="status" class="ok">Alive</span> — Heartbeat: <span id="heartbeat">Stable</span>
-        — <em>“Feed it or watch it die.”</em>
+        Status:
+        <span id="status" class="ok">Alive</span> —
+        Heartbeat:
+        <span id="heartbeat">Stable</span> —
+        <em>“Feed it or watch it die.”</em>
       </p>
 
       <div class="organism-wrap">
-        <canvas id="organism" width="560" height="560"></canvas>
-        <div class="ring"></div><div class="ring ring2"></div><div class="ring ring3"></div>
+        <canvas id="org-canvas" width="640" height="640"></canvas>
+        <div class="organism-ring"></div>
       </div>
 
-      <div class="btns">
-        <button id="feedBtn" class="btn primary">⚡ FEED THE ORGANISM</button>
+      <div class="controls">
+        <button id="feedBtn" class="btn">⚡ FEED THE ORGANISM</button>
         <a id="tradeBtn" class="btn" href="#" target="_blank" rel="noopener">Open Swap</a>
-        <button id="sfxBtn" class="btn">🔇 SFX Off</button>
+        <button id="sfxBtn" class="btn sfx">🔇 SFX Off</button>
       </div>
     </section>
 
-    <section class="grid">
-      <div class="panel stats">
-        <h3>Vitals</h3>
-        <div class="kv">
-          <div>Health</div>
-          <div class="bar"><span id="healthBar" style="width:38%"></span></div>
-        </div>
-        <div class="kv">
-          <div>Mutation Progress</div>
-          <div class="bar"><span id="mutBar" style="width:0%"></span></div>
-        </div>
-        <div class="kv">
-          <div>Decay</div>
-          <div><span id="decayRate">1% / 10m</span></div>
-        </div>
-        <div class="kv">
-          <div>Stage</div>
-          <div><span id="stageNum">1</span></div>
-        </div>
-        <div class="kv">
-          <div>Price</div>
-          <div class="t-mono" id="price">$—</div>
-        </div>
-        <div class="kv">
-          <div>Updated</div>
-          <div id="timestamp">—:—:—</div>
-        </div>
-        <div class="kv">
-          <div>Net Flow (5m)</div>
-          <div class="bar"><span id="flowBar" style="width:50%"></span></div>
-          <div id="flowWord" class="muted">Neutral</div>
-        </div>
-      </div>
+    <!-- ===== Vitals ===== -->
+    <section class="panel twin">
+      <div class="box">
+        <h3 class="h">Vitals</h3>
 
-      <div class="panel">
-        <h3>Trades — Feeding / Starving</h3>
-        <div class="trades-wrap">
-          <!-- header -->
-          <div class="row head t-mono">
-            <div>Side</div>
-            <div class="t-right">Price (USD)</div>
-            <div class="t-right">Value (USD) <span class="muted">(size)</span></div>
-            <div class="t-right">Time</div>
+        <div class="kv"><div class="label">Health</div>
+          <div class="bar"><div id="health-bar" class="bar__fill" style="width:5%"></div></div>
+        </div>
+
+        <div class="kv"><div class="label">Mutation Progress</div>
+          <div class="bar"><div id="mutBar" class="bar__fill" style="width:0%"></div></div>
+        </div>
+
+        <div class="grid2">
+          <div class="kv"><div class="label">Decay</div>
+            <div class="value"><span id="decayRate">1% / 10m</span></div>
           </div>
-          <div id="trades"></div>
+
+          <div class="kv"><div class="label">Stage</div>
+            <div class="value"><span id="stageNum">1</span></div>
+          </div>
         </div>
+
+        <div class="grid2">
+          <div class="kv"><div class="label">Price</div>
+            <div class="value">$<span id="priceLabel">—</span></div>
+          </div>
+
+          <div class="kv"><div class="label">Updated</div>
+            <div class="value"><span id="updatedLabel">—:—:—</span></div>
+          </div>
+        </div>
+
+        <div class="kv"><div class="label">Net Flow (5m)</div>
+          <div class="bar bar--flow"><div id="flowBar" class="bar__fill" style="width:50%"></div></div>
+          <div class="muted center" id="flowLabel">Neutral</div>
+        </div>
+      </div>
+
+      <!-- ===== Trades ===== -->
+      <div class="box">
+        <h3 class="h">Trades — Feeding / Starving</h3>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Side</th>
+              <th>Price (USD)</th>
+              <th>Value (USD) <br/><span class="sub">(size)</span></th>
+              <th class="right">Time</th>
+            </tr>
+          </thead>
+          <tbody id="trades-body">
+            <!-- rows injected by app.js -->
+          </tbody>
+        </table>
       </div>
     </section>
 
+    <!-- ===== Archive (placeholder) ===== -->
     <section class="panel">
-      <h3>Mutation Archive</h3>
-      <ol id="archive">
+      <h3 class="h">Mutation Archive</h3>
+      <ol class="archive">
         <li><strong>Stage 1: The Cell</strong> — Born weak, fragile, dependent on constant feeding.</li>
       </ol>
     </section>
+
+    <footer class="foot">
+      © The Organism — Experimental art/game interface. Not financial advice.
+    </footer>
   </main>
 
-  <script>
-    // simple frontend config
-    window.__CONFIG__ = {
-      apiBase: "https://organism-backend.onrender.com", // ← your backend base
-      tokenMint: "7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV",
-      jupiterSwapUrl: "https://jup.ag/swap/SOL-7W4geAJyy7hxuPXESMMBaW8Zi4MbhVN9uvt6BJ2SEPAV"
-    };
-  </script>
+  <!-- App logic -->
   <script src="app.js"></script>
 </body>
 </html>
