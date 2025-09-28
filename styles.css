@@ -285,3 +285,59 @@ body{
   .flow{ width: calc(100vw - 24px); }
   .dock{ grid-template-columns:1fr; gap:12px; bottom:10px; }
 }
+/* ===================== */
+/* NET FLOW (fix & pin)  */
+/* ===================== */
+
+/* Layout for the line containing the bar + label */
+.flowline{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;   /* change to flex-end to right-align */
+  gap:12px;
+  margin:8px 0 0;
+}
+
+/* The bar container */
+.flow{
+  position:relative;
+  height:6px;
+  width: clamp(220px, 42vw, 480px);
+  border-radius:999px;
+  background:#122030;
+  border:1px solid var(--stroke);
+  overflow:hidden;
+}
+
+/* Normalize BOTH possibilities: your element might be #flowBar or .needle */
+#flowBar,
+.needle{
+  display:block;
+  height:100%;
+  width:50%;                    /* JS will animate this */
+  border-radius:999px;
+  background:linear-gradient(90deg,#ff7a86 0%, #cdd3da 50%, #67e0a3 100%);
+  transition: width .35s ease;
+}
+
+/* Label next to the bar */
+#flowLabel{
+  color:var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+  min-width:66px;
+}
+
+/* In case the old style was forcing a 1px line somewhere: */
+.kv .value .needle,
+.kv .value #flowBar{ height:6px !important; }
+
+/* Keep the bottom dock above the canvas */
+.dock{ z-index:2; }
+
+/* Make sure the canvas is behind everything */
+#org-canvas{ z-index:0; pointer-events:none; }
+
+/* Mobile safety */
+@media (max-width: 980px){
+  .flow{ width: clamp(200px, 70vw, 420px); }
+}
