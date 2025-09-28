@@ -1,0 +1,45 @@
+*{box-sizing:border-box}
+:root{
+  --bg:#0b0e13; --glass:#0f1420aa;
+  --txt:#d7e0ef; --health:#58ff9a; --warn:#ffbe4d; --crit:#ff5e76;
+}
+html,body{height:100%}
+body{
+  margin:0; font-family:'JetBrains Mono',monospace; color:var(--txt);
+  background: radial-gradient(1200px 600px at 20% -10%, #12203a 0, transparent 60%),
+              radial-gradient(900px 500px at 120% 10%, #1a2a4a 0, transparent 50%),
+              var(--bg);
+}
+.wrap{max-width:960px;margin:0 auto;padding:32px}
+.hero{display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px}
+h1{letter-spacing:2px;margin:6px 0 4px 0}
+h2{margin:0 0 16px 0}
+.glass{background:linear-gradient(180deg,var(--glass),#0b0e13aa);border:1px solid #1d2638;border-radius:16px;box-shadow:0 10px 35px #00000055}
+.panel{margin-top:18px;padding:20px}
+.btn{
+  padding:12px 18px;border-radius:12px;border:1px solid #2a3550; text-decoration:none;color:var(--txt);
+  display:inline-block; transition:transform .05s ease, background .2s ease;
+  background:#111a2c;
+}
+.btn:hover{transform:translateY(-1px)}
+.btn.primary{background:#13243f;border-color:#2e4c8a}
+.status.alive{color:var(--health);font-weight:600}
+.status.dead{color:var(--crit);font-weight:600}
+
+.meters{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.meterHead{display:flex;justify-content:space-between;font-size:14px;margin-bottom:8px;opacity:.9}
+.bar{height:12px;background:#101622;border:1px solid #1a2236;border-radius:999px;overflow:hidden}
+.bar>div{height:100%;width:0%}
+#healthBar{background:linear-gradient(90deg,#1cff88,#72ffc9)}
+#mutBar{background:linear-gradient(90deg,#5fd0ff,#9fe8ff)}
+
+.alert{margin-top:14px;padding:12px;border-radius:10px;border:1px solid #2a3550;background:#141c2a}
+.alert.warn{border-color:#4b3a1b;color:var(--warn)}
+.alert.crit{border-color:#5a1e28;color:var(--crit)}
+.hidden{display:none}
+
+.log{list-style:none;margin:16px 0 0 0;padding:0;max-height:180px;overflow:auto;border-top:1px dashed #27314a}
+.log li{padding:8px 4px;border-bottom:1px dashed #27314a;font-size:13px;opacity:.9}
+
+.archive{margin:0;padding-left:18px;font-size:14px;opacity:.95}
+.foot{opacity:.6;text-align:center;margin-top:18px;font-size:12px}
