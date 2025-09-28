@@ -1,125 +1,272 @@
-:root{
-  --ink: #dfe7ff;
-  --ink-dim: #92a2c6;
-  --bg-0: #05060b;
-  --bg-1: #0a0d14;
-  --glass: rgba(10,12,18,.72);
-  --ring: rgba(110,180,255,.22);
-  --ring2: rgba(110,180,255,.08);
-  --ok: #6ee7b7;
-  --warn: #ef4444;
-  --aqua: #69d5ff;
-  --mag: #ff70c8;
-  --line: rgba(255,255,255,.06);
-  --chip: rgba(255,255,255,.08);
-  --chip-border: rgba(255,255,255,.12);
+/********* CONFIG *********/
+const TOKEN_MINT = "YOUR_CA_HERE"; // <- put your Contract Address here
+// If you have a backend ready, set your API root here:
+const API = ""; // e.g. "https://your-backend.onrender.com" or keep "" to use the tiny simulator
+
+// If you want the Open Swap button to prefill a DEX URL, set it here:
+const DEX_URL = ""; // e.g. "https://jup.ag/swap/SOL-<MINT>"
+
+/********* DOM *********/
+const canvas = document.getElementById("org-canvas");
+const ctx = canvas.getContext("2d", { alpha: true });
+
+const healthBar = document.getElementById("healthBar");
+const healthPct = document.getElementById("healthPct");
+const mutBar = document.getElementById("mutBar");
+const mutPct = document.getElementById("mutPct");
+
+const stageNum = document.getElementById("stageNum");
+const statusEl = document.getElementById("status");
+const heartbeat = document.getElementById("heartbeat");
+const priceLabel = document.getElementById("priceLabel");
+const updatedLabel = document.getElementById("updatedLabel");
+const flowBar = document.getElementById("flowBar");
+
+const tradesBody = document.getElementById("trades-body");
+const feedBtn = document.getElementById("feedBtn");
+const tradeBtn = document.getElementById("tradeBtn");
+
+/********* Helpers *********/
+const clamp = (v, a=0, b=1) => Math.max(a, Math.min(b, v));
+const nowHHMMSS = () => {
+  const d = new Date();
+  const p2 = x => String(x).padStart(2,"0");
+  return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+};
+const fmtUSD = v => `$${Number(v).toFixed(2)}`;
+
+/********* State *********/
+let W=0,H=0, CX=0, CY=0, t=0;
+let HEALTH = 0.48;   // 0..1
+let MUT = 0.08;      // 0..1
+let STAGE = 1;
+let FLOW = 0.50;     // 0..1 left->right needle
+let PRICE = 0.01;
+
+/********* Canvas size *********/
+function resizeCanvas(){
+  canvas.width = W = window.innerWidth;
+  canvas.height = H = window.innerHeight;
+  CX = W/2; CY = H/2;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+/********* Creature visuals *********/
+const motes = Array.from({length: 34}, () => ({
+  x: Math.random()*W, y: Math.random()*H,
+  dx: (Math.random()-.5)*0.8, dy: (Math.random()-.5)*0.8,
+  r: 0.8 + Math.random()*1.4
+}));
+
+function drawRings(){
+  ctx.save();
+  ctx.translate(CX, CY);
+  ctx.lineWidth = 1;
+
+  const rings = 8;
+  for(let i=1;i<=rings;i++){
+    const R = 90 + i*56 + Math.sin(t*0.3 + i)*2;
+    const alpha = 0.10 - i*0.006;
+    ctx.beginPath();
+    ctx.arc(0,0,R,0,Math.PI*2);
+    ctx.strokeStyle = `rgba(110,180,255,${alpha})`;
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
-/* Base */
-html,body{
-  margin:0; padding:0; height:100%;
-  background: radial-gradient(2000px 1200px at 50% 80%, #0d1320 0%, #05060b 60%, #04050a 100%);
-  color: var(--ink); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial;
-  overflow:hidden;
+function drawNucleus(){
+  const base = 44 + Math.sin(t*0.9)*2 + (HEALTH*20);
+  const grad = ctx.createRadialGradient(CX, CY, 8, CX, CY, base+28);
+  grad.addColorStop(0, `rgba(255,255,255,0.95)`);
+  grad.addColorStop(0.25, `rgba(210,235,255,0.75)`);
+  grad.addColorStop(1, `rgba(110,170,255,0.08)`);
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(CX, CY, base, 0, Math.PI*2); ctx.fill();
+
+  // halo
+  ctx.beginPath(); ctx.arc(CX, CY, base+26, 0, Math.PI*2);
+  ctx.strokeStyle = `rgba(160,210,255,0.18)`; ctx.lineWidth=18; ctx.stroke();
 }
 
-/* Title */
-.hero-title{
-  position:fixed; inset: 22px auto auto 24px; z-index:4;
-  letter-spacing:.12em; text-transform:uppercase;
-}
-.hero-title h1{ margin:0; font-weight:700; font-size:22px; color:var(--ink); opacity:.9;}
-.hero-title .zero{ color:var(--aqua); }
-
-/* Canvas */
-#org-canvas{
-  position:fixed; inset:0; width:100vw; height:100vh; display:block; z-index:0;
-}
-
-/* Trades (left) */
-.trades{
-  position:fixed; left:24px; top:120px; z-index:3;
-  width:360px;
-  background:linear-gradient(180deg, rgba(16,20,30,.70), rgba(10,12,18,.70));
-  border:1px solid var(--chip-border);
-  border-radius:16px;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 20px 60px rgba(0,0,0,.4);
-}
-.trades-head{
-  padding:12px 14px; font-size:13px; color:var(--ink-dim);
-  border-bottom:1px solid var(--line);
-}
-.live-dot{ color:#0f9; margin-left:6px; }
-
-.trades-table{
-  width:100%; border-collapse:collapse; font-size:13px;
-}
-.trades-table th, .trades-table td{
-  text-align:left; padding:10px 14px; border-bottom:1px dashed var(--line);
-}
-.trades-table thead th{ color:var(--ink-dim); font-weight:600; }
-.trades-table tbody tr:last-child td{ border-bottom:none; }
-
-.type-feed{ color: var(--ok); }
-.type-starve{ color: var(--warn); }
-
-/* Slim stats (right) */
-.stats{
-  position:fixed; right:24px; top:140px; z-index:3; width:360px;
-  display:flex; flex-direction:column; gap:14px;
-}
-.stat{
-  background:linear-gradient(180deg, rgba(16,20,30,.70), rgba(10,12,18,.70));
-  border:1px solid var(--chip-border);
-  border-radius:16px; padding:12px 14px;
-  backdrop-filter:blur(10px);
-}
-.stat .label{ font-size:12px; color:var(--ink-dim); margin-bottom:8px; }
-.bar{ height:8px; background:#1a2233; border-radius:8px; overflow:hidden; position:relative; }
-.bar span{ position:absolute; left:0; top:0; height:100%; width:0%; background: linear-gradient(90deg, var(--aqua), #9be3ff); }
-.pct{ font-size:12px; color:var(--ink-dim); margin-top:8px; text-align:right; }
-#mutBar{ background: linear-gradient(90deg, var(--mag), #ffc0ea); }
-
-.traits{ display:flex; gap:8px; flex-wrap:wrap; }
-.traits .chip{
-  background:var(--chip); border:1px solid var(--chip-border);
-  padding:6px 10px; border-radius:999px; font-size:12px; color:var(--ink);
+function drawTether(){
+  const phase = t*0.8;
+  const anchorX = CX-220, anchorY = CY+80;
+  const ctrlX = CX-140 + Math.sin(phase)*20;
+  const ctrlY = CY+40 + Math.cos(phase*0.7)*28;
+  ctx.beginPath();
+  ctx.moveTo(anchorX, anchorY);
+  ctx.quadraticCurveTo(ctrlX, ctrlY, CX, CY);
+  ctx.strokeStyle = `rgba(180,220,255,0.35)`;
+  ctx.lineCap="round"; ctx.lineWidth=6;
+  ctx.stroke();
 }
 
-/* Bottom status bar */
-.statusbar{
-  position:fixed; left:0; right:0; bottom:0; z-index:3;
-  display:flex; align-items:center; gap:12px; padding:12px 16px;
-  background: linear-gradient(180deg, transparent, rgba(3,5,10,.85));
-  backdrop-filter: blur(6px);
-  border-top:1px solid var(--line);
+function drawMotes(){
+  for(const m of motes){
+    m.x += m.dx; m.y += m.dy;
+    if(m.x < 0) m.x = W; if(m.x > W) m.x = 0;
+    if(m.y < 0) m.y = H; if(m.y > H) m.y = 0;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+    ctx.fillStyle = "rgba(190,220,255,0.20)";
+    ctx.fill();
+  }
 }
-.statusbar .chip{
-  background:var(--chip); border:1px solid var(--chip-border);
-  padding:6px 10px; border-radius:999px; font-size:12px; color:var(--ink);
-}
-.meter{ display:flex; align-items:center; gap:10px; margin-left:auto; }
-.meter-label{ font-size:12px; color:var(--ink-dim); }
-.needle{ width:240px; height:6px; background:#182132; border-radius:99px; overflow:hidden; }
-.needle span{ display:block; height:100%; width:50%; background:linear-gradient(90deg, #78ffd6, #a8ff78); transform-origin:left center; }
 
-/* Buttons */
-.btn{
-  background:#0d1424; color:var(--ink); border:1px solid var(--chip-border);
-  border-radius:10px; padding:8px 12px; font-size:12px;
-}
-.btn.ghost{ background:transparent; }
+function draw(){
+  t += 0.016;
+  ctx.clearRect(0,0,W,H);
 
-/* Responsive */
-@media (max-width: 1100px){
-  .trades{ width:320px; }
-  .stats{ width:320px; }
+  // faint hazy backdrop
+  const haze = ctx.createRadialGradient(CX, CY, 40, CX, CY, Math.max(W,H)*0.9);
+  haze.addColorStop(0, "rgba(10,18,28,0.0)");
+  haze.addColorStop(1, "rgba(0,0,0,0.85)");
+  ctx.fillStyle = haze; ctx.fillRect(0,0,W,H);
+
+  drawRings();
+  drawMotes();
+  drawTether();
+  drawNucleus();
+
+  requestAnimationFrame(draw);
 }
-@media (max-width: 900px){
-  .trades{ left:12px; right:12px; width:auto; top:auto; bottom:96px; }
-  .stats{ right:12px; left:12px; width:auto; top:auto; bottom:12px; flex-direction:row; }
-  .statusbar{ gap:8px; flex-wrap:wrap; }
-  .meter{ order:5; width:100%; justify-content:flex-start; }
-  .needle{ width:60vw; }
+draw();
+
+/********* UI setters *********/
+function setHealth(p){ p=clamp(p,0,1); HEALTH=p;
+  const pct = Math.round(p*100);
+  healthBar.style.width = `${pct}%`;
+  healthPct.textContent = pct+"%";
 }
+function setMutation(p){ p=clamp(p,0,1); MUT=p;
+  const pct = Math.round(p*100);
+  mutBar.style.width = `${pct}%`;
+  mutPct.textContent = pct+"%";
+}
+function setStage(n){ STAGE = n; stageNum.textContent = String(n); }
+function setFlow(p){ FLOW = clamp(p,0,1); flowBar.style.transform = `scaleX(${FLOW})`; }
+function setPrice(v){ PRICE=v; priceLabel.textContent = Number(v).toFixed(2); }
+
+/********* Trades rendering (DEX-style table, max 5) *********/
+function renderTrades(items){
+  // expect items: [{ time:"HH:MM:SS", type:"Feed"|"Starve", valueUsd:Number, priceUsd:Number }]
+  tradesBody.innerHTML = "";
+  const rows = items.slice(0,5); // max 5
+  for(const r of rows){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="${r.type.toLowerCase()==='feed' ? 'type-feed':'type-starve'}">${r.type}</td>
+      <td>${fmtUSD(r.valueUsd)}</td>
+      <td>${fmtUSD(r.priceUsd)}</td>
+      <td>${r.time}</td>
+    `.trim();
+    tradesBody.appendChild(tr);
+  }
+}
+
+/********* Data sources *********/
+// If you have a backend, plug these in. If not, we run a tasteful simulator.
+async function fetchHealth(){
+  if(!API){ return { price: PRICE, time: Date.now() }; }
+  const r = await fetch(`${API}/health?mint=${encodeURIComponent(TOKEN_MINT)}`);
+  return r.json();
+}
+async function fetchTrades(){
+  if(!API){ 
+    // simulated: alternate feed/starve with random USD
+    const now = new Date();
+    const p2 = x => String(x).padStart(2,"0");
+    const tstr = `${p2(now.getHours())}:${p2(now.getMinutes())}:${p2(now.getSeconds())}`;
+    const items = Array.from({length:5}).map((_,i)=>({
+      time: tstr,
+      type: Math.random()<0.45 ? "Feed" : "Starve",
+      valueUsd: 5 + Math.random()*40,
+      priceUsd: PRICE
+    }));
+    return items;
+  }
+  const r = await fetch(`${API}/trades?mint=${encodeURIComponent(TOKEN_MINT)}&limit=5`);
+  return r.json();
+}
+
+/********* Buttons *********/
+feedBtn.addEventListener("click", (ev)=>{
+  ev.preventDefault();
+  // tiny “feel” nudge
+  const delta = (Math.random()*0.06)+0.04;
+  setHealth( clamp(HEALTH + delta, 0,1) );
+  setFlow( clamp(FLOW + 0.15, 0,1) );
+});
+if(DEX_URL){
+  tradeBtn.href = DEX_URL;
+}else{
+  tradeBtn.removeAttribute("href");
+}
+
+/********* Boot + Schedules *********/
+function renderTraits(){
+  // simple preview: unlock chips as mutation climbs
+  const row = document.getElementById("traitsRow");
+  row.innerHTML = "";
+  const steps = [
+    { th: 0.12, label:"Gleam" },
+    { th: 0.28, label:"Echo Ring" },
+    { th: 0.50, label:"Eye-spark" }
+  ];
+  steps.filter(s=>MUT>=s.th).forEach(s=>{
+    const span = document.createElement("span");
+    span.className="chip";
+    span.textContent = s.label;
+    row.appendChild(span);
+  });
+}
+
+async function tickHealth(){
+  try{
+    const h = await fetchHealth();
+    if(h && typeof h.price === "number"){
+      setPrice(h.price);
+      updatedLabel.textContent = nowHHMMSS();
+    }else{
+      updatedLabel.textContent = nowHHMMSS();
+    }
+  }catch(e){ /* ignore */ }
+}
+
+async function tickTrades(){
+  try{
+    const items = await fetchTrades();
+    // net flow pushes needle + slightly nudges health
+    let net = 0;
+    for(const x of items){ net += (x.type === "Feed" ? 1 : -1) * x.valueUsd; }
+    const norm = clamp(0.5 + Math.tanh(net/100)/2, 0,1);
+    setFlow(norm);
+    setHealth( clamp(HEALTH + (norm-0.5)*0.02, 0,1) );
+
+    // newest first
+    items.sort((a,b)=> (a.time < b.time ? 1 : -1));
+    renderTrades(items);
+  }catch(e){ /* ignore */ }
+}
+
+function boot(){
+  setStage(1);
+  setHealth(HEALTH);
+  setMutation(MUT);
+  setFlow(0.5);
+  setPrice(0.01);
+  renderTraits();
+  tickHealth();
+  tickTrades();
+
+  // schedules
+  setInterval(()=> { updatedLabel.textContent = nowHHMMSS(); }, 6000);
+  setInterval(()=>{
+    const tgt = 0.55 + (FLOW-0.5)*0.2;
+    const next = HEALTH + (tgt-HEALTH)*0.04;
+    setHealth(clamp(next));
+  }, 4000);
+}
+boot();
