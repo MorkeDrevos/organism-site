@@ -1,3 +1,4 @@
+
 /***** CONFIG *****/
 const API = "https://organism-backend.onrender.com"; // your backend base
 const JUP_SWAP = "https://jup.ag/swap";               // set to your token link when ready
@@ -236,3 +237,9 @@ setInterval(pollTrades, POLL_TRADES_MS);
 // initial
 pollHealth();
 pollTrades();
+
+const pulse = 0.1 * Math.sin(t * 2) + 1; 
+ctx.beginPath();
+ctx.arc(Cx, Cy, baseR * pulse, 0, 2 * Math.PI);
+ctx.fillStyle = `hsla(${hue}, 80%, 55%, 0.25)`;
+ctx.fill();
