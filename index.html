@@ -3,91 +3,97 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>THE ORGANISM — Live Habitat</title>
-  <!-- NEW NAME so cache can't reuse -->
-  <link rel="stylesheet" href="styles-v11.css" />
+  <title>THE ORGANISM — Habitat Console</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <!-- Creature canvas behind everything -->
-  <canvas id="org-canvas" aria-hidden="true"></canvas>
+  <!-- Fullscreen organism canvas (womb background) -->
+  <canvas id="org-canvas"></canvas>
 
-  <!-- Top status strip -->
-  <header class="topbar">
+  <!-- HUD -->
+  <header class="hud">
     <div class="brand">THE ORGANISM</div>
-    <div class="stage"><span id="stageName">Stage 1 · The Cell</span></div>
+    <div class="stage"><span id="stageBadge">Stage 1 · The Cell</span></div>
   </header>
 
-  <!-- Status line + controls -->
-  <section class="status-strip">
-    <div class="status-line">
-      Status: <span id="status" class="ok">Alive</span> · Heartbeat: <span id="heartbeat">Stable</span>
+  <!-- Mid strip with live status + controls + net flow -->
+  <section class="mid">
+    <div class="status">
+      <span>Status: <span id="status" class="accent">Alive</span></span>
+      <span>·</span>
+      <span>Heartbeat: <span id="heartbeat">Stable</span></span>
     </div>
-    <div class="controls">
+
+    <div class="controls inline">
       <button id="feedBtn" class="btn">⚡ Feed</button>
       <a id="tradeBtn" class="btn ghost" href="#" target="_blank" rel="noopener">Open Swap</a>
       <button id="sfxBtn" class="btn ghost">🔇 SFX Off</button>
     </div>
-  </section>
 
-  <!-- Price + updated + Net Flow -->
-  <section class="inline-metrics">
-    <div>Price <span id="priceLabel">$—</span></div>
-    <div>Updated <span id="updatedLabel">—:—:—</span></div>
-    <div class="flow-wrap">
-      <div id="flowBar" class="flow"><div id="flowNeedle" class="needle"></div></div>
-      <div id="flowLabel" class="flow-label">Neutral</div>
+    <div class="kv">
+      <div>Price <span id="priceLabel">$—</span></div>
+      <div>Updated <span id="updatedLabel">—:—:—</span></div>
+    </div>
+
+    <div class="flow">
+      <div class="flowbar" id="flowBar"><i id="flowNeedle"></i></div>
+      <div class="flowlabel" id="flowLabel">Neutral</div>
     </div>
   </section>
 
-  <!-- Bottom dock -->
-  <main class="dock">
-    <section class="panel panel-metrics">
-      <h3 class="h">Vitals <span class="live">Live</span></h3>
-
-      <div class="kv">
-        <div class="label">Health</div>
-        <div class="barline"><div id="healthBar" class="bar"></div></div>
-        <div id="healthPct" class="pct">0%</div>
+  <!-- Bottom console: vitals + trades -->
+  <section class="dock">
+    <div class="panel vitals">
+      <div class="panel-head">
+        <h3>Vitals <span class="live">Live</span></h3>
+      </div>
+      <div class="lab">
+        <label>Health</label>
+        <div class="meter"><i id="healthBar" style="width: 0%"></i></div>
+        <div class="pct" id="healthPct">0%</div>
       </div>
 
-      <div class="kv">
-        <div class="label">Mutation</div>
-        <div class="barline"><div id="mutBar" class="bar thin"></div></div>
-        <div id="mutPct" class="pct">0%</div>
+      <div class="lab">
+        <label>Mutation</label>
+        <div class="meter alt"><i id="mutBar" style="width: 0%"></i></div>
+        <div class="pct" id="mutPct">0%</div>
       </div>
 
-      <div class="grid2">
-        <div class="kv compact">
-          <div class="label">Decay</div>
-          <div id="decayRate" class="value">1% / 10m</div>
+      <div class="lab grid2">
+        <div>
+          <label>Decay</label>
+          <div class="text" id="decayRate">1% / 10m</div>
         </div>
-        <div class="kv compact right">
-          <div class="label">Stage</div>
-          <div id="stageNum" class="value">1</div>
+        <div class="r">
+          <label>Stage</label>
+          <div class="text" id="stageNum">1</div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <section class="panel panel-trades">
-      <h3 class="h">Feeding / Starving <span class="live">Live</span></h3>
+    <div class="panel trades">
+      <div class="panel-head">
+        <h3>Feeding / Starving <span class="live">Live</span></h3>
+      </div>
+
       <table class="table">
         <thead>
           <tr>
-            <th class="tl">Time</th>
-            <th class="tl">Type</th>
-            <th class="tr">Value (USD)</th>
-            <th class="tr">Price (USD)</th>
+            <th class="left">Time</th>
+            <th class="left">Type</th>
+            <th class="left">Value (USD)</th>
+            <th class="left">Price (USD)</th>
           </tr>
         </thead>
-        <tbody id="trades-body"></tbody>
+        <tbody id="trades-body">
+          <!-- rows injected by app.js -->
+        </tbody>
       </table>
-    </section>
-  </main>
+    </div>
+  </section>
 
   <footer class="foot">© The Organism — Experimental art/game interface. Not financial advice.</footer>
 
-  <script>console.log('Organism UI v11');</script>
-  <!-- NEW NAME so cache can't reuse -->
-  <script src="app-v11.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
