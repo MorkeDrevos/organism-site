@@ -1,242 +1,228 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>THE ORGANISM</title>
-  <style>
-    :root{
-      --ink:#dfe7ff;
-      --bg0:#070a12;
-      --bg1:#0b0f18;
-      --mag:#ee6bd6;
-      --aqua:#74d7ff;
-    }
-    html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 20% 15%, #141a28 0%, var(--bg0) 45%, var(--bg1) 100%);color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
-    #hud{position:fixed;left:14px;top:14px;padding:10px 16px;border-radius:12px;background:rgba(8,10,16,.25);backdrop-filter:blur(6px);border:1px solid rgba(120,160,255,.15);letter-spacing:.12em}
-    #app{position:fixed;inset:0;display:block}
-    canvas{display:block}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>THE ORGANISM</title>
+<style>
+  :root{
+    --ink:#dfe7ff;       /* text */
+    --bg0:#070a14;       /* deep space */
+    --bg1:#0a0f1e;
+    --aqua:#7ad5ff;      /* aqua glow */
+    --mag:#ff77d8;       /* magenta glow */
+    --mote:#cfe3ffcc;
+  }
+  html,body{height:100%}
+  body{margin:0;background:radial-gradient(100% 120% at 70% 100%, #121b2f 0%, var(--bg0) 45%) no-repeat; color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; overflow:hidden;}
+  #hud{position:fixed; left:14px; top:14px; padding:8px 14px; border:1px solid #1e2a44; border-radius:12px; color:#cfe3ff; letter-spacing:.15em; font-weight:650; text-transform:uppercase; background:rgba(10,18,34,.35); backdrop-filter: blur(6px)}
+  canvas{display:block; position:fixed; inset:0;}
+</style>
 </head>
 <body>
   <div id="hud">THE ORGANISM</div>
-  <div id="app"></div>
+  <canvas id="org"></canvas>
 
-  <!-- ONE script: UMD build of Three.js -->
-  <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
+<script>
+(() => {
+/* ========= Canvas bootstrap ========= */
+const canvas = document.getElementById('org');
+const ctx     = canvas.getContext('2d', { alpha:true });
+let DPR = Math.min(2, window.devicePixelRatio||1);
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  canvas.width  = Math.floor(w * DPR);
+  canvas.height = Math.floor(h * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+addEventListener('resize', resize, {passive:true});
+resize();
 
-  <script>
-  ;(() => {
-    const DPR = Math.min(2, window.devicePixelRatio || 1);
+/* ========= Time ========= */
+let t0 = performance.now();
+const now = () => (performance.now()-t0)/1000;
 
-    // ---------- Scene ----------
-    const container = document.getElementById('app');
-    const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x0a0f18, 0.018);
+/* ========= Palette ========= */
+const PAL = {
+  space0:'#0a0f1e',
+  aqua: 'rgba(120,210,255, .55)',
+  aquaSoft:'rgba(140,220,255, .20)',
+  mag:  'rgba(255,120,220, .55)',
+  magSoft:'rgba(255,120,220, .20)',
+  skin:'rgba(230,236,246, .18)',
+  head:'#f4fbff',
+  eyeIris:'rgba(110,170,255,.9)',
+  eyePupil:'#0b0f18',
+  cord:'rgba(255,155,215,.95)',
+  cordGlow:'rgba(255,130,220,.28)',
+  rib:'#cfe3ff22',
+  ring:'rgba(120,180,220,.18)',
+  mote:'rgba(210,230,255,.55)'
+};
 
-// Camera (pull back more so we see whole organism)
-const camera = new THREE.PerspectiveCamera(40, window.innerWidth/window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.8, 9);   // further away
-camera.lookAt(0, 0.8, 0);
+/* ========= Scene motes/starfield ========= */
+const RND = (a,b)=> a + Math.random()*(b-a);
+const MOTES = Array.from({length:120}, () => ({
+  x: Math.random(), y: Math.random(), z: RND(.4,1.4), d:RND(-.02,.02)
+}));
 
-    // Renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setPixelRatio(DPR);
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.setClearColor(0x000000, 0);
-    container.appendChild(renderer.domElement);
+function background(t){
+  const w=canvas.width/DPR, h=canvas.height/DPR;
 
-    // Resize
-    function onResize() {
-      const w = container.clientWidth, h = container.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h, false);
-    }
-    window.addEventListener('resize', onResize, { passive: true });
-    onResize();
+  // deep vignette
+  const g = ctx.createRadialGradient(w*0.75, h*1.1, 40, w*0.5, h*0.6, Math.max(w,h));
+  g.addColorStop(0,'#0e1530');
+  g.addColorStop(1,PAL.space0);
+  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
 
-    // ---------- Lights ----------
-    const amb = new THREE.AmbientLight(0x91a6ff, 0.55);
-    scene.add(amb);
+  // nebula veils
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  ctx.filter = 'blur(40px)';
+  ctx.fillStyle = PAL.magSoft;
+  ctx.beginPath(); ctx.ellipse(w*.18, h*.25, w*.55, h*.4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = PAL.aquaSoft;
+  ctx.beginPath(); ctx.ellipse(w*.88, h*.85, w*.5, h*.45, 0, 0, Math.PI*2); ctx.fill();
+  ctx.restore();
 
-    const key = new THREE.DirectionalLight(0xffffff, 0.9);
-    key.position.set(3, 5, 6);
-    key.castShadow = false;
-    scene.add(key);
+  // motes
+  for(const m of MOTES){
+    m.x += (0.00045 + m.d*0.15);
+    if(m.x>1){ m.x=0; m.y=Math.random(); }
+    const x=w*m.x, y=h*m.y, r=(m.z*.7+.25)*(1+.25*Math.sin(t*.8+m.x*17));
+    ctx.fillStyle=PAL.mote; ctx.fillRect(x,y,r,r);
+  }
+}
 
-    const rim = new THREE.PointLight(0x7cd8ff, 1.4, 12);
-    rim.position.set(-3.5, 1.2, -2.5);
-    scene.add(rim);
+/* ========= Echo rings (faint) ========= */
+function echo(cx,cy,scale,t){
+  ctx.save(); ctx.lineWidth=.9*scale;
+  for(let i=0;i<8;i++){
+    const r=(120+i*28)*scale*(1+.01*Math.sin(t*.7+i));
+    ctx.strokeStyle = PAL.ring;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+  }
+  ctx.restore();
+}
 
-    const heartGlow = new THREE.PointLight(0xff6bd0, 0.0, 3);
-    heartGlow.position.set(0, 0.1, 0.2);
-    scene.add(heartGlow);
+/* ========= Helper (rounded cap Bézier limb) ========= */
+function limbArc(ax,ay,len,rot,thick,phase,t,color){
+  ctx.save();
+  ctx.translate(ax,ay);
+  ctx.rotate(rot + .25*Math.sin(t*1.3+phase));
+  ctx.strokeStyle = color;
+  ctx.lineWidth = thick;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(0,0,len, .15*Math.PI, .85*Math.PI);
+  ctx.stroke();
+  ctx.restore();
+}
 
-    // ---------- Star field ----------
-    {
-      const geo = new THREE.BufferGeometry();
-      const N = 1200;
-      const pos = new Float32Array(N * 3);
-      for (let i = 0; i < N; i++) {
-        const r = 18 * Math.pow(Math.random(), 0.6);
-        const th = Math.random() * Math.PI * 2;
-        const ph = Math.acos(2 * Math.random() - 1);
-        pos[i*3+0] = r * Math.sin(ph) * Math.cos(th);
-        pos[i*3+1] = r * Math.cos(ph);
-        pos[i*3+2] = r * Math.sin(ph) * Math.sin(th);
-      }
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      const mat = new THREE.PointsMaterial({ size: 0.02, color: 0xbfd7ff, transparent: true, opacity: 0.75 });
-      const stars = new THREE.Points(geo, mat);
-      scene.add(stars);
-    }
+/* ========= The organism =========
+   Anatomy cues:
+   - Big round head (iris + pupil + blink) => clearly "face".
+   - Elliptical torso with faint ribs/spine.
+   - Four limb buds that sway.
+   - Single umbilical cord attaching low belly; tip glows.
+*/
+function drawOrganism(cx,cy,scale,t){
+  const breathe = 1 + .08*Math.sin(t*0.9);
+  const pulse   = (0.5+0.5*Math.sin(t*1.25))**2;
 
-    // ---------- Materials ----------
-    const skin = new THREE.MeshStandardMaterial({
-      color: 0xe9edf6,
-      roughness: 0.65,
-      metalness: 0.0,
-      emissive: new THREE.Color(0x88bfff),
-      emissiveIntensity: 0.1
-    });
+  /* halo */
+  const halo = ctx.createRadialGradient(cx,cy,8*scale, cx,cy,160*scale);
+  halo.addColorStop(0,`rgba(200,220,255,${.18+.15*pulse})`);
+  halo.addColorStop(1,'transparent');
+  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx,cy,160*scale,0,Math.PI*2); ctx.fill();
 
-    const headSkin = skin.clone();
-    headSkin.emissive = new THREE.Color(0xaad7ff);
-    headSkin.emissiveIntensity = 0.18;
+  /* torso (slightly angled) */
+  const torsoW = 110*scale, torsoH = 76*scale;
+  ctx.save();
+  ctx.translate(cx, cy+8*scale);
+  ctx.rotate(-0.12);
+  ctx.fillStyle = PAL.skin;
+  ctx.strokeStyle = `rgba(150,210,255, ${.22+.16*pulse})`;
+  ctx.lineWidth = 2.2*scale;
+  ctx.beginPath();
+  ctx.ellipse(0,0, torsoW*breathe, torsoH, 0, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
 
-    const cordMat = new THREE.MeshStandardMaterial({
-      color: 0xf78bd3, roughness: 0.4, metalness: 0.0,
-      emissive: new THREE.Color(0xff7ad5), emissiveIntensity: 0.25
-    });
+  // ribs / vertebra hints
+  ctx.strokeStyle = PAL.rib; ctx.lineWidth = 1.1*scale;
+  for(let i=0;i<6;i++){
+    ctx.beginPath();
+    ctx.ellipse(-8*scale, 4*scale + i*7*scale, torsoW*.72, torsoH*.42, -0.25, .1*Math.PI, .9*Math.PI);
+    ctx.stroke();
+  }
+  ctx.restore();
 
-    const irisMat = new THREE.MeshStandardMaterial({
-      color: 0x8bb8ff, roughness: 0.2, metalness: 0.0,
-      emissive: 0x4ca6ff, emissiveIntensity: 0.15
-    });
+  /* head */
+  const headR = 46*scale*breathe;
+  const headX = cx + headR*.05;
+  const headY = cy - headR*.7;
 
-    const pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0f16, roughness: 0.8 });
+  // outer glow rim
+  ctx.beginPath(); ctx.arc(headX,headY, headR+2*scale, 0, Math.PI*2);
+  ctx.strokeStyle = `rgba(120,200,255, ${.35+.2*pulse})`;
+  ctx.lineWidth = 3*scale; ctx.stroke();
 
-    // ---------- Helpers ----------
-    function capsuleGeometry(length = 1, radius = 0.2, segments = 12) {
-      // Fallback if CapsuleGeometry is unavailable
-      if (THREE.CapsuleGeometry) return new THREE.CapsuleGeometry(radius, Math.max(length - 2 * radius, 0.001), segments, segments);
-      const group = new THREE.Group();
-      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length - 2*radius, segments), skin);
-      const sTop = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, segments), skin);
-      const sBot = sTop.clone();
-      sTop.position.y = (length/2 - radius);
-      sBot.position.y = -(length/2 - radius);
-      group.add(cyl, sTop, sBot);
-      const geo = new THREE.BufferGeometry().setFromObject(group);
-      return geo;
-    }
+  // head fill
+  ctx.fillStyle = PAL.head;
+  ctx.beginPath(); ctx.arc(headX,headY, headR, 0, Math.PI*2); ctx.fill();
 
-    function tubeFromPoints(points, radius = 0.08, tubularSegments = 48) {
-      const curve = new THREE.CatmullRomCurve3(points);
-      return new THREE.TubeGeometry(curve, tubularSegments, radius, 12, false);
-    }
+  // iris + pupil + blink
+  const irisR = 9.5*scale, pupilR = 4.6*scale;
+  const eyeX  = headX + headR*.18;
+  const eyeY  = headY - headR*.02 + headR*.03*Math.sin(t*2.2);
+  const blink = (Math.sin(t*3.2+0.7) > .92)? .12 : 1;
+  ctx.fillStyle = PAL.eyeIris;  ctx.beginPath(); ctx.arc(eyeX,eyeY, irisR*blink, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = PAL.eyePupil; ctx.beginPath(); ctx.arc(eyeX,eyeY, pupilR*blink, 0, Math.PI*2); ctx.fill();
 
-    // ---------- Organism ----------
-    const organism = new THREE.Group();
-    scene.add(organism);
+  /* limb buds */
+  const limbLen = 52*scale, thick = 6.2*scale;
+  limbArc(cx-18*scale, cy- 6*scale, limbLen*.70, -0.78, thick, 0.1, t, PAL.mag); // arm L
+  limbArc(cx+16*scale, cy- 2*scale, limbLen*.68,  0.86, thick, 0.3, t, PAL.mag); // arm R
+  limbArc(cx-12*scale, cy+30*scale, limbLen*.78, -0.96, thick, 0.6, t, PAL.mag); // leg L
+  limbArc(cx+14*scale, cy+28*scale, limbLen*.75,  0.98, thick, 0.9, t, PAL.mag); // leg R
 
-    // Torso (small vs head; embryo proportions: head ≫ torso)
-    const torso = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 32), skin);
-    torso.position.set(0, 0.0, 0);
-    torso.scale.set(1.1, 0.85, 1.0);  // slight squish
-    organism.add(torso);
+  /* umbilical cord */
+  const ph = t*.8;
+  const endX = cx - 170*scale;
+  const endY = cy + 28*scale + 16*scale*Math.sin(ph);
+  const c1x = cx - 46*scale,  c1y = cy +  8*scale + 16*scale*Math.sin(ph*1.2);
+  const c2x = cx - 120*scale, c2y = cy + 34*scale + 12*scale*Math.cos(ph*.9);
+  ctx.save();
+  ctx.lineCap='round';
+  ctx.shadowBlur = 14*scale; ctx.shadowColor = PAL.cordGlow;
+  ctx.strokeStyle = PAL.cord; ctx.lineWidth = 6.0*scale;
+  ctx.beginPath(); ctx.moveTo(cx-6*scale, cy+18*scale);
+  ctx.bezierCurveTo(c1x,c1y, c2x,c2y, endX,endY);
+  ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.fillStyle = PAL.cordGlow; ctx.beginPath(); ctx.arc(endX,endY,8*scale*(.8+.3*pulse),0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
 
-    // Head (big)
-    const head = new THREE.Mesh(new THREE.SphereGeometry(1.35, 40, 40), headSkin);
-    head.position.set(0.0, 0.95, 0.0);
-    organism.add(head);
+/* ========= Main loop ========= */
+function draw(){
+  const t  = now();
+  const w  = canvas.width / DPR;
+  const h  = canvas.height / DPR;
 
-    // Eye
-    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 24), irisMat);
-    iris.position.set(0.38, 0.25, 1.02);
-    head.add(iris);
+  background(t);
 
-    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 24), pupilMat);
-    pupil.position.set(0.03, 0.01, 0.22);
-    iris.add(pupil);
+  // organism anchor (slight float)
+  const cx = w * 0.48;
+  const cy = h * 0.58 + Math.sin(t*0.6)*6;
+  const scale = Math.min(w,h) / 900; // responsive
 
-    // Limb buds (short, curved)
-    function limb(len = 1.1, thick = 0.16) {
-      const geo = capsuleGeometry(len, thick);
-      return new THREE.Mesh(geo, skin);
-    }
-    const armL = limb(1.15, 0.14); armL.position.set(-0.65, 0.05, 0.25); armL.rotation.set(0.3, 0.2, 1.2);
-    const armR = limb(1.15, 0.14); armR.position.set( 0.65, 0.05, 0.25); armR.rotation.set(0.3,-0.2,-1.2);
-    const legL = limb(1.35, 0.17); legL.position.set(-0.55,-0.65, 0.10); legL.rotation.set(0.9, 0.2, 1.0);
-    const legR = limb(1.35, 0.17); legR.position.set( 0.55,-0.65, 0.10); legR.rotation.set(0.9,-0.2,-1.0);
-    organism.add(armL, armR, legL, legR);
+  echo(cx,cy,scale,t);
+  drawOrganism(cx,cy,scale,t);
 
-    // Umbilical cord (single)
-    const cordPoints = [
-      new THREE.Vector3(0.0, -0.2, 0.35),
-      new THREE.Vector3(-1.0, -0.45, 0.2),
-      new THREE.Vector3(-2.4, -0.1 + Math.random()*0.1, -0.2)
-    ];
-    const cord = new THREE.Mesh(tubeFromPoints(cordPoints, 0.07, 64), cordMat);
-    cord.castShadow = false;
-    organism.add(cord);
-
-    // Subtle rib/vertebra hint (thin rings)
-    const rings = new THREE.Group();
-    for (let i = 0; i < 7; i++) {
-      const r = 0.35 + i * 0.06;
-      const tor = new THREE.TorusGeometry(r, 0.005, 8, 60);
-      const mat = new THREE.MeshBasicMaterial({ color: 0x8ac7ff, transparent: true, opacity: 0.08 });
-      const m = new THREE.Mesh(tor, mat);
-      m.rotation.x = Math.PI/2.8;
-      m.position.set(0, 0.05, 0.15);
-      rings.add(m);
-    }
-    torso.add(rings);
-
-    // ---------- Animation ----------
-    const t0 = performance.now();
-    function animate() {
-      const ms = performance.now() - t0;
-      const t = ms / 1000;
-
-      // breathing
-      const breathe = 1.0 + 0.06 * Math.sin(t * 1.6);
-      head.scale.setScalar(1.0 * breathe);
-      torso.scale.y = 0.85 * (1.0 + 0.04 * Math.sin(t * 1.6 + 0.7));
-
-      // eye blink
-      const blink = (Math.sin(t * 3.5 + 0.6) > 0.9) ? 0.20 : 1.0;
-      iris.scale.set(1, blink, 1);
-
-      // limb sway
-      const s = 0.35 * Math.sin(t * 1.3);
-      armL.rotation.z =  1.2 + s * 0.25;
-      armR.rotation.z = -1.2 - s * 0.25;
-      legL.rotation.z =  1.0 + s * 0.18;
-      legR.rotation.z = -1.0 - s * 0.18;
-
-      // cord wobble
-      cord.geometry.dispose();
-      const p0 = new THREE.Vector3(0.0, -0.2, 0.35);
-      const p1 = new THREE.Vector3(-1.0, -0.45 + 0.15*Math.sin(t*1.1), 0.2 + 0.1*Math.cos(t*0.9));
-      const p2 = new THREE.Vector3(-2.4, -0.1 + 0.1*Math.cos(t*0.7), -0.2 + 0.05*Math.sin(t*0.6));
-      cord.geometry = tubeFromPoints([p0, p1, p2], 0.07, 64);
-
-      // soft heart glow pulse
-      heartGlow.intensity = 0.5 + 0.45 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.2), 2);
-
-      // gentle float
-      organism.position.y = 0.06*Math.sin(t*0.9);
-      organism.rotation.y = 0.06*Math.sin(t*0.5);
-      organism.rotation.x = 0.02*Math.cos(t*0.6);
-
-      renderer.render(scene, camera);
-      requestAnimationFrame(animate);
-    }
-    animate();
-  })();
-  </script>
+  requestAnimationFrame(draw);
+}
+draw();
+})();</script>
 </body>
 </html>
