@@ -1,12 +1,7 @@
-/* ===== Theme ===== */
 :root{
   --ink:#e9f6ff;
-  --bg:#0a0b14;            /* deep space */
-  --bg-edge:#0f1020;
-  --aqua:#84e7ff;
-  --mag:#ff79d3;
-  --teal:#66d0d0;
-  --halo:rgba(130,210,255,.25);
+  --bg:#070914;            /* deep space */
+  --bg-edge:#0e1022;
   --mote:rgba(210,220,255,.75);
 }
 
@@ -21,7 +16,6 @@ body{
   overflow:hidden;
 }
 
-/* ===== Brand ===== */
 .topbar{
   position:fixed; inset:12px auto auto 16px;
   display:flex; align-items:center; gap:12px;
@@ -34,12 +28,10 @@ body{
   text-transform:uppercase; color:var(--ink); opacity:.95;
 }
 
-/* ===== Canvas fills screen ===== */
 #org-canvas{
   position:fixed; inset:0; width:100vw; height:100vh; display:block;
 }
 
-/* (optional) small screens: shrink brand a touch */
 @media (max-width: 520px){
   .topbar{ inset:8px auto auto 10px; }
   .title{ font-size:13px; letter-spacing:.18em; }
