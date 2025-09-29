@@ -208,3 +208,10 @@ function boot(){
   requestAnimationFrame(draw);
 }
 boot();
+// Core palette
+const wombColors = {
+  nucleus: "rgba(180,255,255,0.8)",   // glowing aqua
+  tether: "rgba(255,100,200,0.6)",   // magenta-pink
+  ring: "rgba(0,255,255,0.25)",      // aqua halo
+  haze: "rgba(100,0,100,0.15)"       // deep womb haze
+};
