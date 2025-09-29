@@ -1,17 +1,43 @@
-:root{ --ink:#d9ebff; }
-*{ box-sizing:border-box }
-html,body{ height:100% }
+:root{
+  --ink:#dbe7ff;              /* text */
+  --bg:#080a12;               /* deep space */
+  --edge:#131728;             /* vignette edge */
+  --aqua:#5be7ff;             /* rim light 1 */
+  --mag:#ff66cc;              /* rim light 2 */
+  --cord:#ffb499;             /* umbilical */
+  --haze:rgba(120,180,255,.08);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
 body{
-  margin:0; color:var(--ink);
-  background:#000; overflow:hidden;
-  font:14px/1.4 ui-sans-serif,system-ui,Inter,Segoe UI,Roboto,Arial;
+  margin:0; background:
+    radial-gradient(1200px 800px at 65% 55%, rgba(30,38,66,.4), transparent 60%),
+    radial-gradient(900px 600px at 35% 45%, rgba(140,0,80,.15), transparent 60%),
+    linear-gradient(#0a0f1e,#070a13 40%, var(--bg));
+  color:var(--ink); font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+  overflow:hidden;
 }
-.topbar{ position:fixed; left:16px; top:12px; z-index:2 }
+
+.topbar{
+  position:fixed; inset:18px auto auto 18px; z-index:2;
+  pointer-events:none;
+}
 .brand{
-  margin:0; font-weight:700; letter-spacing:.12em; font-size:13px;
-  color:rgba(217,235,255,.85);
+  margin:0; font-weight:700; letter-spacing:.28rem; font-size:14px;
+  text-transform:uppercase; opacity:.85; filter:drop-shadow(0 0 12px rgba(110,150,255,.15));
 }
+
+/* Canvas fills scene */
 #org-canvas{
   position:fixed; inset:0; width:100vw; height:100vh; display:block;
-  background: radial-gradient(1200px 900px at 60% 68%, rgba(12,16,26,.22), #000 70%);
+}
+
+/* (Optional) hover hint on desktop: tiny crosshair */
+@media (pointer:fine){
+  body:after{
+    content:""; position:fixed; left:50%; top:50%; width:2px; height:2px;
+    background:rgba(255,255,255,.05); border-radius:50%;
+    transform:translate(-50%,-50%); pointer-events:none;
+  }
 }
