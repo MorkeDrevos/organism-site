@@ -1,57 +1,40 @@
-:root{
-  --ink: #e6efff;
-  --bg0: #090912;       /* deep space */
-  --bg1: #0e0e1b;       /* vignette inner */
-  --aqua:  #7fe9ff;     /* nucleus glow */
-  --mag:   #ff73d3;     /* accent / rim */
-  --haze:  #60a6c8;     /* membrane tint */
-  --btn:   rgba(255,255,255,.06);
-  --btn-b: rgba(255,255,255,.20);
+/* ==== Branding ==== */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  z-index: 5;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-html,body,canvas{margin:0;padding:0}
-
-body.dark{
-  color:var(--ink);
-  background: radial-gradient(1200px 900px at 50% 60%, var(--bg1), var(--bg0));
-  overflow:hidden;
-  font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
-  letter-spacing:.2px;
+.brand .logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #9ff, #06c 80%);
+  box-shadow: 0 0 12px rgba(0,200,255,0.7), 0 0 24px rgba(255,0,200,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
 }
 
-/* Canvas behind all UI */
-#org-canvas{
-  position:fixed; inset:0;
-  width:100vw; height:100vh;
-  display:block;
+.brand .logo .orb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px rgba(255,255,255,0.9);
 }
 
-/* Minimal toolbar */
-.toolbar{
-  position:fixed; top:14px; left:14px; right:14px;
-  display:flex; align-items:center; gap:10px;
-  pointer-events:auto; z-index:2;
+.title {
+  font-family: 'Helvetica Neue', sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #eee;
 }
-.brand{
-  opacity:.8; font-weight:700; letter-spacing:.12em;
-}
-.spacer{flex:1}
-.btn{
-  background:var(--btn);
-  border:1px solid var(--btn-b);
-  color:var(--ink);
-  padding:6px 10px; border-radius:8px;
-  backdrop-filter: blur(4px);
-  cursor:pointer;
-}
-.btn:hover{ transform:translateY(-1px) }
-.btn.ghost{ background:transparent }
 
-/* Optional: hide toolbar on very small phones if you want 100% canvas */
-@media (max-width: 420px){
-  .toolbar{ gap:6px }
-  .btn{ padding:5px 8px; font-size:12px }
-  .brand{ font-size:12px }
+.title span {
+  color: #39e;
 }
