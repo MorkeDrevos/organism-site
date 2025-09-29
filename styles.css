@@ -1,90 +1,79 @@
+/* ===== Base / Palette ===== */
 :root{
-  /* COOL palette (kept for dev) */
-  --bg:#05060a; --ink:#e9f5ff; --edge:#142034;
-  --aqua:#7ff0e0; --mag:#ff66cc; --cyan:#bfe9ff;
-  --fog: rgba(22,30,50,.28);
-  --fog2: rgba(10,14,24,.9);
-  --ring: rgba(140,230,255,.08);
-  --halo: rgba(110,242,222,.12);
-  --echoMag: rgba(255,102,204,.35);
-  --echoCya: rgba(160,240,255,.30);
-}
-
-/* REALISTIC “uterine” palette — APPLY THIS: add class="warm" to <body> */
-body.warm{
-  /* deep claret w/ brown undertone, warm ink */
-  --bg:#0c0607;
-  --ink:#ffe9e6;
-  --edge:#281012;
-
-  /* warms for glow + accents */
-  --aqua:#ffcc88;            /* used for tether tint & bars */
-  --mag:#ff667e;             /* warm magenta/pink */
-  --cyan:#ffd6b0;            /* pale amber */
-
-  /* fog & vignette tuned for uterus vibe */
-  --fog:  rgba(58,12,20,.26);
-  --fog2: rgba(18,8,10,.94);
-
-  /* ring/halo in warm ambers */
-  --ring: rgba(255,195,150,.08);
-  --halo: rgba(255,180,140,.12);
-
-  /* chromatic echo split (pink + amber) */
-  --echoMag: rgba(255,120,150,.35);
-  --echoCya: rgba(255,205,160,.30);
+  --ink:#cfefff;            /* UI text on dark */
+  --edge:#0f1a23;           /* vignette edge */
+  --aqua:#82f6ff;           /* neon aqua */
+  --mag:#ff8fe0;            /* neon magenta */
+  --chip:#0a1116;           /* chip bg */
+  --chip-br:#133143;        /* chip border */
+  --btn:#0f1720;            /* button bg */
+  --btn-br:#2a3c51;         /* button border */
 }
 
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; color:var(--ink);
-  font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  /* darker, realistic background (warm or cool depending on class) */
-  background:
-    radial-gradient(140% 120% at 50% 20%, #1a0f12, var(--bg));
-  overflow:hidden;
+  margin:0;
+  font:15px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  letter-spacing:.2px;
+  overflow:hidden; /* keep the canvas feel */
+  color:var(--ink);
+  background:#000; /* fallback */
 }
 
-/* minimal top bar you already have */
-.topbar{
-  position:fixed; inset:16px 16px auto 16px; z-index:6;
-  display:flex; align-items:center; gap:14px;
+/* ===== Themes ===== */
+body.dark{
+  /* subtle deep vignette; canvas still paints its own haze */
+  background:
+    radial-gradient(1200px 800px at 50% 60%, #06090d 0%, #020508 55%, #000 100%);
 }
-.topbar h1{ margin:0; font-weight:900; letter-spacing:.22em; font-size:22px; opacity:.9 }
-.topbar .zero{ color:#8ab7ff }
-.chips{ display:flex; gap:8px; align-items:center }
+body.warm{
+  background:
+    radial-gradient(1200px 800px at 50% 60%, #2a100e 0%, #1a0e0e 60%, #120808 100%);
+}
+
+/* ===== Canvas fills screen ===== */
+#org-canvas{
+  position:fixed; inset:0;
+  width:100vw; height:100vh;
+  display:block;
+}
+
+/* ===== Top bar (tiny HUD only) ===== */
+.topbar{
+  position:fixed; left:24px; top:18px; right:24px;
+  display:flex; align-items:center; gap:16px;
+  z-index:3; pointer-events:none; /* chips keep pointer */
+}
+.topbar .spacer{flex:1}
+h1{
+  margin:0; font-weight:700; letter-spacing:2px; font-size:22px;
+  color:#cfe7ff; text-shadow:0 0 12px rgba(130,246,255,0.1);
+}
+.zero{color:#7ad8ff}
+
+/* chips / buttons */
+.chips{display:flex; gap:10px; pointer-events:auto}
 .chip{
-  background:rgba(12,10,14,.55); border:1px solid var(--edge); border-radius:999px;
-  padding:6px 10px; font-weight:800; opacity:.95;
+  display:inline-flex; align-items:center; gap:8px;
+  padding:6px 10px; border-radius:10px;
+  background:var(--chip); border:1px solid var(--chip-br);
+  color:#bfe7ff; opacity:.95;
+  box-shadow:0 4px 20px rgba(0,0,0,.35);
 }
 .btn{
-  display:inline-flex; padding:8px 12px; border-radius:10px; cursor:pointer; user-select:none;
-  background:linear-gradient(180deg, #151016, #0c0a0c); border:1px solid var(--edge); font-weight:800;
-  transition:transform .06s ease, box-shadow .12s ease;
+  appearance:none; border:none; cursor:pointer; user-select:none;
+  padding:6px 12px; border-radius:10px;
+  background:var(--btn); color:#e8f7ff;
+  border:1px solid var(--btn-br);
+  box-shadow:0 6px 24px rgba(0,0,0,.4);
 }
-.btn:active{ transform:translateY(1px) }
-.btn.ghost{ background:transparent }
+.btn.ghost{background:transparent}
+.btn:active{transform:translateY(1px)}
 
-#org-canvas{ position:fixed; inset:0; width:100vw; height:100vh; display:block; z-index:0 }
-/* ==== Dark Theme (default womb look) ==== */
-body.dark {
-  background: radial-gradient(ellipse at center, #050505 0%, #000 100%);
-  color: #e0faff; /* faint aqua ink */
-}
-
-body.dark .chip {
-  background: rgba(0,0,0,0.5);
-  border: 1px solid rgba(0,255,255,0.2);
-  color: #aaf;
-}
-
-body.dark .btn {
-  background: rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,0,255,0.3);
-  color: #fff;
-}
-
-body.dark #org-canvas {
-  background: radial-gradient(circle at center, #0a0a0a 0%, #000 100%);
+/* Small screens */
+@media (max-width: 680px){
+  .topbar{left:12px; right:12px}
+  h1{font-size:18px}
+  .chips .chip, .btn{padding:5px 9px}
 }
