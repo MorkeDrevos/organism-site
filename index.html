@@ -12,49 +12,47 @@
     <h1>ORGANISM.<span class="zero">ZERO</span></h1>
   </header>
 
-  <!-- Creature canvas (full screen, behind everything) -->
+  <!-- Background creature -->
   <canvas id="org-canvas"></canvas>
 
-  <!-- Top chips -->
+  <!-- Top chips (match your current positions) -->
   <div class="top">
-    <div class="chips">
-      <span class="chip">Stage <span id="stageNum">1</span></span>
-      <span class="chip live">alive</span>
-      <span class="chip">stable</span>
-    </div>
     <div class="chips">
       <span class="chip">$<span id="priceLabel">0.01</span></span>
       <span class="chip">Updated <span id="updatedLabel">--:--:--</span></span>
+    </div>
+    <div class="chips">
       <a id="feedBtn" class="btn">Feed</a>
       <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener">Open Swap</a>
     </div>
   </div>
 
-  <!-- Left: Trades (max 3) -->
-  <aside class="trades card">
+  <!-- Left: Evolution Log (replaces Feeding/Starving) -->
+  <aside class="evo card">
     <div class="card-head">
-      <h3>Feeding / Starving <span class="live-dot">Live</span></h3>
+      <h3>Evolution Log <span class="live-dot">Live</span></h3>
     </div>
-    <ul id="tradesList" class="tlist"></ul>
+    <ul id="evoList" class="elog"></ul>
   </aside>
 
-  <!-- Right: Stats -->
+  <!-- Right stack: Traits + slim stats -->
+  <aside class="traits card">
+    <div class="card-head"><h3>Traits</h3></div>
+    <div id="traitsGrid" class="tgrid"></div>
+  </aside>
+
   <aside class="stats card">
-    <div class="row">
-      <span>Health</span><span id="healthPct">0%</span>
-    </div>
+    <div class="row"><span>Health</span><span id="healthPct">0%</span></div>
     <div class="bar aqua"><span id="healthBar" style="width:0%"></span></div>
 
-    <div class="row">
-      <span>Mutation</span><span id="mutPct">0%</span>
-    </div>
+    <div class="row"><span>Mutation</span><span id="mutPct">0%</span></div>
     <div class="bar mag"><span id="mutBar" style="width:0%"></span></div>
   </aside>
 
-  <!-- Bottom status -->
+  <!-- Footer status -->
   <footer class="status">
     <div class="left">
-      Stage <span id="stageChip">1</span> • <span id="lifeChip">alive</span> • stable •
+      Stage <span id="stageChip">1</span> • <span id="lifeChipFoot">alive</span> • stable •
       $<span id="priceFoot">0.01</span> • <span id="clock">--:--:--</span>
     </div>
     <div class="meter"><span id="flowBar"></span></div>
