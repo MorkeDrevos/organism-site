@@ -1,6 +1,25 @@
 :root{
-  --bg:#05060a; --ink:#e9f5ff; --edge:#162131;
-  --aqua:#6ef2de; --mag:#ff66cc; --cyan:#9ae7ff;
+  /* Base palette (cool) */
+  --bg:#05060a; --ink:#e9f5ff; --edge:#142034;
+  --aqua:#7ff0e0; --mag:#ff66cc; --cyan:#bfe9ff;
+  --fog: rgba(22,30,50,.28);
+  --fog2: rgba(10,14,24,.9);
+  --ring: rgba(140,230,255,.08);
+  --halo: rgba(110,242,222,.12);
+  --echoMag: rgba(255,102,204,.35);
+  --echoCya: rgba(160,240,255,.30);
+}
+
+/* switch to warm vibe by toggling .warm on <body> (optional) */
+body.warm{
+  --bg:#0b0706; --edge:#2a1a1a;
+  --aqua:#ffcc88; --mag:#ff667e; --cyan:#ffd6b0;
+  --fog: rgba(62,24,18,.28);
+  --fog2: rgba(16,10,9,.92);
+  --ring: rgba(255,210,160,.08);
+  --halo: rgba(255,198,150,.12);
+  --echoMag: rgba(255,100,150,.35);
+  --echoCya: rgba(255,220,180,.30);
 }
 
 *{box-sizing:border-box}
@@ -8,29 +27,33 @@ html,body{height:100%}
 body{
   margin:0; color:var(--ink);
   font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  /* deep night + slight vignetting */
-  background: radial-gradient(120% 120% at 50% 12%, #0d1423, var(--bg));
+  background: radial-gradient(120% 120% at 50% 10%, #0f1828, var(--bg));
   overflow:hidden;
 }
 
-/* Minimal top bar (no boxes anywhere else) */
+/* Minimal top bar */
 .topbar{
   position:fixed; inset:16px 16px auto 16px; z-index:6;
   display:flex; align-items:center; gap:14px;
+  backdrop-filter:saturate(120%) blur(2px);
 }
 .topbar h1{ margin:0; font-weight:900; letter-spacing:.22em; font-size:22px; opacity:.9 }
 .topbar .zero{ color:#6bcaff }
 .topbar .spacer{ flex:1 }
 .chips{ display:flex; gap:8px; align-items:center }
 .chip{
-  background:rgba(10,16,28,.7); border:1px solid var(--edge); border-radius:999px;
+  background:rgba(10,16,28,.65); border:1px solid var(--edge); border-radius:999px;
   padding:6px 10px; font-weight:800; opacity:.95;
 }
 .btn{
   display:inline-flex; padding:8px 12px; border-radius:10px; cursor:pointer; user-select:none;
   background:linear-gradient(180deg, #131c2b, #0b1320); border:1px solid var(--edge); font-weight:800;
+  transition:transform .06s ease, box-shadow .12s ease;
 }
+.btn:active{ transform:translateY(1px) }
 .btn.ghost{ background:transparent }
 
-/* Canvas fills screen behind everything */
 #org-canvas{ position:fixed; inset:0; width:100vw; height:100vh; display:block; z-index:0 }
+
+/* Small helper to toggle warm/cool quickly (optional) */
+.palette-toggle{ display:none }
