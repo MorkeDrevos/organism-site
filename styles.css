@@ -1,79 +1,57 @@
-/* ===== Base / Palette ===== */
 :root{
-  --ink:#cfefff;            /* UI text on dark */
-  --edge:#0f1a23;           /* vignette edge */
-  --aqua:#82f6ff;           /* neon aqua */
-  --mag:#ff8fe0;            /* neon magenta */
-  --chip:#0a1116;           /* chip bg */
-  --chip-br:#133143;        /* chip border */
-  --btn:#0f1720;            /* button bg */
-  --btn-br:#2a3c51;         /* button border */
+  --ink: #e6efff;
+  --bg0: #090912;       /* deep space */
+  --bg1: #0e0e1b;       /* vignette inner */
+  --aqua:  #7fe9ff;     /* nucleus glow */
+  --mag:   #ff73d3;     /* accent / rim */
+  --haze:  #60a6c8;     /* membrane tint */
+  --btn:   rgba(255,255,255,.06);
+  --btn-b: rgba(255,255,255,.20);
 }
 
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0;
-  font:15px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  letter-spacing:.2px;
-  overflow:hidden; /* keep the canvas feel */
-  color:var(--ink);
-  background:#000; /* fallback */
-}
+html,body,canvas{margin:0;padding:0}
 
-/* ===== Themes ===== */
 body.dark{
-  /* subtle deep vignette; canvas still paints its own haze */
-  background:
-    radial-gradient(1200px 800px at 50% 60%, #06090d 0%, #020508 55%, #000 100%);
-}
-body.warm{
-  background:
-    radial-gradient(1200px 800px at 50% 60%, #2a100e 0%, #1a0e0e 60%, #120808 100%);
+  color:var(--ink);
+  background: radial-gradient(1200px 900px at 50% 60%, var(--bg1), var(--bg0));
+  overflow:hidden;
+  font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+  letter-spacing:.2px;
 }
 
-/* ===== Canvas fills screen ===== */
+/* Canvas behind all UI */
 #org-canvas{
   position:fixed; inset:0;
   width:100vw; height:100vh;
   display:block;
 }
 
-/* ===== Top bar (tiny HUD only) ===== */
-.topbar{
-  position:fixed; left:24px; top:18px; right:24px;
-  display:flex; align-items:center; gap:16px;
-  z-index:3; pointer-events:none; /* chips keep pointer */
+/* Minimal toolbar */
+.toolbar{
+  position:fixed; top:14px; left:14px; right:14px;
+  display:flex; align-items:center; gap:10px;
+  pointer-events:auto; z-index:2;
 }
-.topbar .spacer{flex:1}
-h1{
-  margin:0; font-weight:700; letter-spacing:2px; font-size:22px;
-  color:#cfe7ff; text-shadow:0 0 12px rgba(130,246,255,0.1);
+.brand{
+  opacity:.8; font-weight:700; letter-spacing:.12em;
 }
-.zero{color:#7ad8ff}
-
-/* chips / buttons */
-.chips{display:flex; gap:10px; pointer-events:auto}
-.chip{
-  display:inline-flex; align-items:center; gap:8px;
-  padding:6px 10px; border-radius:10px;
-  background:var(--chip); border:1px solid var(--chip-br);
-  color:#bfe7ff; opacity:.95;
-  box-shadow:0 4px 20px rgba(0,0,0,.35);
-}
+.spacer{flex:1}
 .btn{
-  appearance:none; border:none; cursor:pointer; user-select:none;
-  padding:6px 12px; border-radius:10px;
-  background:var(--btn); color:#e8f7ff;
-  border:1px solid var(--btn-br);
-  box-shadow:0 6px 24px rgba(0,0,0,.4);
+  background:var(--btn);
+  border:1px solid var(--btn-b);
+  color:var(--ink);
+  padding:6px 10px; border-radius:8px;
+  backdrop-filter: blur(4px);
+  cursor:pointer;
 }
-.btn.ghost{background:transparent}
-.btn:active{transform:translateY(1px)}
+.btn:hover{ transform:translateY(-1px) }
+.btn.ghost{ background:transparent }
 
-/* Small screens */
-@media (max-width: 680px){
-  .topbar{left:12px; right:12px}
-  h1{font-size:18px}
-  .chips .chip, .btn{padding:5px 9px}
+/* Optional: hide toolbar on very small phones if you want 100% canvas */
+@media (max-width: 420px){
+  .toolbar{ gap:6px }
+  .btn{ padding:5px 8px; font-size:12px }
+  .brand{ font-size:12px }
 }
