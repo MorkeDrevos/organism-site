@@ -3,26 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ORGANISM.ZERO</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <title>ORGANISM.ZERO — Amoeba</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
-<!-- DARK is the default look -->
 <body class="dark">
-  <!-- Minimal top chips -->
-  <header class="topbar">
-    <h1>ORGANISM.<span class="zero">ZERO</span></h1>
-    <div class="spacer"></div>
-    <div class="chips">
-      <span class="chip" id="priceChip">$0.01</span>
-      <span class="chip" id="updatedChip">Updated --:--:--</span>
-      <button class="btn" id="feedBtn">Feed</button>
-      <a class="btn ghost" id="tradeBtn" target="_blank" rel="noopener" href="#">Open Swap</a>
-    </div>
-  </header>
-
-  <!-- Creature canvas (full screen, behind everything) -->
+  <!-- Creature canvas -->
   <canvas id="org-canvas"></canvas>
 
-  <script src="/app.js"></script>
+  <!-- Tiny toolbar (kept minimal) -->
+  <div class="toolbar">
+    <span class="brand">ORGANISM.<b>ZERO</b></span>
+    <div class="spacer"></div>
+    <button id="feedBtn" class="btn">Feed</button>
+    <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener" href="#">Open Swap</a>
+  </div>
+
+  <script src="app.js"></script>
 </body>
 </html>
