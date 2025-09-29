@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <!-- Top bar -->
+  <!-- Minimal top strip (keeps controls, nothing else) -->
   <header class="topbar">
     <h1>ORGANISM.<span class="zero">ZERO</span></h1>
     <div class="spacer"></div>
@@ -19,41 +19,8 @@
     </div>
   </header>
 
-  <!-- Background organism -->
+  <!-- The creature (full-screen) -->
   <canvas id="org-canvas"></canvas>
-
-  <!-- Slim right panel -->
-  <aside class="panel">
-    <div class="row">
-      <span>Health</span><span id="healthPct">0%</span>
-    </div>
-    <div class="bar aqua"><span id="healthBar" style="width:0%"></span></div>
-
-    <div class="row">
-      <span>Mutation</span><span id="mutPct">0%</span>
-    </div>
-    <div class="bar mag"><span id="mutBar" style="width:0%"></span></div>
-
-    <div class="sigils">
-      <div class="sigil" id="sigil-biolume" title="Biolume Rings"></div>
-      <div class="sigil mag" id="sigil-echo" title="Echo Pulse"></div>
-      <div class="sigil" id="sigil-tether" title="Tether Cord"></div>
-    </div>
-  </aside>
-
-  <!-- Bottom status + ticker -->
-  <footer class="status">
-    <div class="left">
-      Stage <span id="stageChip">1</span> • <span id="lifeChipFoot">alive</span> • stable •
-      $<span id="priceFoot">0.01</span> • <span id="clock">--:--:--</span>
-    </div>
-
-    <div class="meter"><span id="flowBar"></span></div>
-
-    <div class="ticker" id="ticker">
-      <!-- events slide left here -->
-    </div>
-  </footer>
 
   <script src="/app.js"></script>
 </body>
