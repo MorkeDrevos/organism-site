@@ -1,60 +1,46 @@
-/* =========  Palette / tokens  ========= */
+/* ===== Theme ===== */
 :root{
-  --ink:#e8eef7;
-  --muted:#9aa3b2;
-  --bg:#0b0a14;             /* deep space */
-  --ring:#4aa7d9;           /* echo rings */
-  --mag:#c462ff;            /* accent */
-  --aqua:#7bdfff;           /* accent */
-  --edge:#1d2230;           /* subtle edges */
+  --ink:#e9f6ff;
+  --bg:#0a0b14;            /* deep space */
+  --bg-edge:#0f1020;
+  --aqua:#84e7ff;
+  --mag:#ff79d3;
+  --teal:#66d0d0;
+  --halo:rgba(130,210,255,.25);
+  --mote:rgba(210,220,255,.75);
 }
 
-/* =========  Base  ========= */
-*{ box-sizing:border-box }
-html,body{ height:100% }
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
 body{
   margin:0;
-  font:14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
   color:var(--ink);
-  background: radial-gradient(120% 120% at 70% 20%, #171428 0%, var(--bg) 40%) fixed;
+  background: radial-gradient(1200px 800px at 60% 40%, var(--bg-edge), var(--bg));
+  font:15px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif;
+  letter-spacing:.2px;
   overflow:hidden;
 }
 
-/* =========  Canvas  ========= */
-#org-canvas{
-  position:fixed; inset:0;
-  width:100vw; height:100vh;
-  display:block;
-  background: radial-gradient(circle at 50% 50%, rgba(12,10,24,.6), transparent 55%),
-              radial-gradient(160% 120% at 10% 120%, rgba(204,102,255,.05), transparent 60%),
-              radial-gradient(160% 120% at 120% -10%, rgba(121,223,255,.05), transparent 60%);
-}
-
-/* =========  Minimal brand  ========= */
+/* ===== Brand ===== */
 .topbar{
-  position:fixed; top:10px; left:12px;
-  z-index:4;
-  pointer-events:auto;
-  transition:opacity .25s ease, transform .25s ease;
-  opacity:.75;
+  position:fixed; inset:12px auto auto 16px;
+  display:flex; align-items:center; gap:12px;
+  z-index:2; user-select:none; pointer-events:none;
 }
-.topbar:hover{ opacity:1 }
-
-.brand{ display:flex; align-items:center; gap:10px; }
-.mark{ display:block; filter:drop-shadow(0 0 6px rgba(121,223,255,.25)) drop-shadow(0 0 10px rgba(204,102,255,.2)); }
-
+.brand{ display:flex; align-items:center; gap:10px; opacity:.9; }
+.mark{ width:24px; height:24px; filter:drop-shadow(0 0 6px rgba(116,209,255,.6)); }
 .title{
-  margin:0;
-  font-weight:620;
-  letter-spacing:.22em;
-  font-size:13.5px;
-  color:var(--ink);
-  text-transform:uppercase;
-  opacity:.95;
+  margin:0; font-size:16px; font-weight:700; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--ink); opacity:.95;
 }
 
-/* (optional) auto-fade brand when idle; keep if you like */
-@keyframes idleFade { 0%{opacity:.75} 90%{opacity:.2} 100%{opacity:.2} }
-body:not(:hover) .topbar{ animation: idleFade 6s 1 1s forwards }
+/* ===== Canvas fills screen ===== */
+#org-canvas{
+  position:fixed; inset:0; width:100vw; height:100vh; display:block;
+}
 
-/* =========  (Keep any of your existing creature-specific CSS if you had some)  ========= */
+/* (optional) small screens: shrink brand a touch */
+@media (max-width: 520px){
+  .topbar{ inset:8px auto auto 10px; }
+  .title{ font-size:13px; letter-spacing:.18em; }
+}
