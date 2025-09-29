@@ -1,6 +1,16 @@
-/********* CONFIG (edit URLs/labels later) *********/
-const TOKEN_MINT = "YOUR_CA_HERE";  // (only used to build the swap link)
+/********* CONFIG *********/
+const TOKEN_MINT   = "YOUR_CA_HERE";
 const OPEN_SWAP_URL = "https://jup.ag/swap/SOL-" + TOKEN_MINT;
+
+/* Quick knobs (tune freely) */
+const PARAMS = {
+  rings: { count: 7, gap: 36, width: 2, glow: 18, drift: 0.05 },
+  nucleus: { rCore: 28, rOuter: 60, pulse: 0.05, glowCore: 30, glowOuter: 60 },
+  tether: { width: 6, length: 210, sway: 38, wobble: 0.9, tipGlow: 22 },
+  motes: { n: 54, speed: 0.28, twinkle: 0.22, min: 0.5, max: 1.7, parallax: 0.04 },
+  fog: { rippleAmp: 0.18, rippleFreq: 0.7, alpha: 0.08 },
+  heartbeat: { bpmMin: 42, bpmMax: 92 },  // mapped by health
+};
 
 /********* DOM *********/
 const canvas   = document.getElementById("org-canvas");
@@ -9,8 +19,9 @@ const priceEl  = document.getElementById("priceChip");
 const timeEl   = document.getElementById("updatedChip");
 const feedBtn  = document.getElementById("feedBtn");
 const tradeBtn = document.getElementById("tradeBtn");
+tradeBtn.href = OPEN_SWAP_URL;
 
-/********* Sizing *********/
+/********* DPI / size *********/
 function fit() {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = canvas.clientWidth  = window.innerWidth;
@@ -22,135 +33,175 @@ function fit() {
 window.addEventListener("resize", fit);
 fit();
 
-/********* Palette (dark neon) *********/
-const paletteDark = {
-  bgFog1: "rgba(10,18,28,0.75)",
-  bgFog2: "rgba(0,0,0,0.85)",
-  haze:   "rgba(120,0,120,0.10)",
-  ringA:  "rgba(130,246,255,0.16)",
-  ringB:  "rgba(255,140,220,0.13)",
-  nucleusOuter: "rgba(135,255,255,0.35)",
-  nucleusCore:  "rgba(255,255,255,0.85)",
-  tether: "rgba(255,120,210,0.75)",
-  mote:   "rgba(180,220,255,0.85)"
-};
-const paletteWarm = {
-  bgFog1:"rgba(70,20,18,0.6)", bgFog2:"rgba(0,0,0,0.75)",
-  haze:"rgba(255,140,200,0.08)",
-  ringA:"rgba(255,200,120,0.12)", ringB:"rgba(255,90,160,0.12)",
-  nucleusOuter:"rgba(255,240,210,0.32)", nucleusCore:"rgba(255,255,255,0.92)",
-  tether:"rgba(255,210,140,0.75)", mote:"rgba(255,240,230,0.9)"
+/********* Palette: deep space (aqua/magenta) *********/
+const C = {
+  bgEdge:      "#000",                       // final falloff
+  bgNear:      "#070a11",                    // center haze
+  haze:        "rgba(140,0,120,0.10)",       // womb haze wash
+  ringA:       "rgba(130,246,255,0.18)",
+  ringB:       "rgba(255,120,210,0.16)",
+  ringGlowA:   "rgba(130,246,255,0.28)",
+  ringGlowB:   "rgba(255,120,210,0.24)",
+  nucleusCore: "rgba(255,255,255,0.88)",
+  nucleusOut:  "rgba(135,255,255,0.35)",
+  tether:      "rgba(255,120,210,0.78)",
+  mote:        "rgba(190,220,255,0.92)",
 };
 
-// pick by body class
-const useWarm = document.body.classList.contains("warm");
-const C = useWarm ? paletteWarm : paletteDark;
-
-/********* Creature state *********/
+/********* State *********/
 let t = 0;
-let health = 0.55;  // 0..1
+let health = 0.56;   // 0..1
 let mutation = 0.08; // 0..1
-let flow = 0.5;     // -1..1 visual drift
+let flow = 0.5;      // -1..1 (visual drift)
 
-// motes
-const motes = Array.from({length: 42}, () => ({
+/* Motes */
+const motes = Array.from({length: PARAMS.motes.n}, () => ({
   x: Math.random()*canvas.clientWidth,
   y: Math.random()*canvas.clientHeight,
-  dx:(Math.random()-0.5)*0.25,
-  dy:(Math.random()-0.5)*0.25,
-  r: Math.random()*1.3+0.4
+  z: Math.random(), // parallax layer 0..1
+  dx:(Math.random()-0.5)*PARAMS.motes.speed,
+  dy:(Math.random()-0.5)*PARAMS.motes.speed,
+  r: Math.random()*(PARAMS.motes.max-PARAMS.motes.min)+PARAMS.motes.min,
 }));
 
-/********* Helpers *********/
+/********* Utils *********/
 const clamp = (v, a=0, b=1)=>Math.min(b, Math.max(a, v));
-const lerp = (a,b,t)=>a+(b-a)*t;
+const lerp = (a,b,u)=>a+(b-a)*u;
+const map  = (x,a,b,c,d)=> c+(d-c)*((x-a)/(b-a));
+const PI2  = Math.PI*2;
+const RND  = (min,max)=>min+Math.random()*(max-min);
 function nowHHMMSS(){
-  const d=new Date();
-  const p=n=>n.toString().padStart(2,"0");
+  const d=new Date(), p=n=>String(n).padStart(2,"0");
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* tiny 2D noise (cheap) */
+function hash2(x,y){ 
+  return Math.sin(x*127.1 + y*311.7)*43758.5453 % 1; 
+}
+function noise2(x,y){
+  const xi = Math.floor(x), yi = Math.floor(y);
+  const xf = x-xi, yf = y-yi;
+  const s = hash2(xi,yi),   t0=hash2(xi+1,yi);
+  const u = hash2(xi,yi+1), v = hash2(xi+1,yi+1);
+  const sx = xf*xf*(3-2*xf), sy = yf*yf*(3-2*yf);
+  const a = s + sx*(t0-s);
+  const b = u + sx*(v-u);
+  return a + sy*(b-a);
 }
 
 /********* Drawing *********/
 function drawBgFog(w,h){
-  const g = ctx.createRadialGradient(w*0.5, h*0.62, Math.min(w,h)*0.2, w*0.5, h*0.62, Math.max(w,h)*0.9);
-  g.addColorStop(0, C.bgFog1);
-  g.addColorStop(1, C.bgFog2);
+  // radial base
+  const g = ctx.createRadialGradient(w*0.5, h*0.62, Math.min(w,h)*0.15, w*0.5, h*0.62, Math.max(w,h)*0.95);
+  g.addColorStop(0, C.bgNear);
+  g.addColorStop(1, C.bgEdge);
   ctx.fillStyle = g;
   ctx.fillRect(0,0,w,h);
-  // subtle womb haze overlay
+
+  // soft magenta haze wash
   ctx.fillStyle = C.haze;
   ctx.fillRect(0,0,w,h);
+
+  // caustic ripple band (subtle)
+  const amp = PARAMS.fog.rippleAmp * (0.6 + mutation*0.7);
+  const freq = PARAMS.fog.rippleFreq;
+  ctx.globalAlpha = PARAMS.fog.alpha;
+  for(let y=0;y<h;y+=2){
+    const u = y/h;
+    const offset = Math.sin((u*10 + t*freq))*amp*200;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(w*0.1+offset, y, w*0.8, 1);
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawEchoRings(cx, cy){
-  const baseR = Math.min(canvas.clientWidth, canvas.clientHeight) * 0.18;
-  const beat  = 1 + Math.sin(t*1.8)*0.02 + mutation*0.08;
+  const baseR = Math.min(canvas.clientWidth, canvas.clientHeight) * 0.19;
+  const beat  = 1 + Math.sin(t * map(health,0,1,1.6,2.4)) * (0.015 + health*0.04) + mutation*0.05;
   const R = baseR * beat;
 
-  for(let i=0;i<6;i++){
-    const r = R + i*36;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI*2);
-    ctx.strokeStyle = i%2 ? C.ringA : C.ringB;
-    ctx.lineWidth = 2;
-    ctx.shadowColor = i%2 ? "rgba(130,246,255,0.28)" : "rgba(255,120,210,0.22)";
-    ctx.shadowBlur = 18;
+  ctx.lineWidth = PARAMS.rings.width;
+  for(let i=0;i<PARAMS.rings.count;i++){
+    const r = R + i*PARAMS.rings.gap + Math.sin(t*0.7 + i)*PARAMS.rings.drift*40;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, PI2);
+    const isA = i%2===0;
+    ctx.strokeStyle = isA ? C.ringA : C.ringB;
+    ctx.shadowColor = isA ? C.ringGlowA : C.ringGlowB;
+    ctx.shadowBlur = PARAMS.rings.glow * (0.8 + mutation*0.6);
     ctx.stroke();
   }
   ctx.shadowBlur = 0;
 }
 
 function drawNucleus(cx, cy){
-  const wob = 1 + Math.sin(t*2.2)*0.04 + health*0.06;
-  const outer = 56*wob;
+  const wob = 1 + Math.sin(t*2.1)*PARAMS.nucleus.pulse + health*0.05;
+  const rOut = PARAMS.nucleus.rOuter * wob;
+  const rCore= PARAMS.nucleus.rCore  * wob;
+
   // outer glow
   ctx.beginPath();
-  ctx.arc(cx, cy, outer, 0, Math.PI*2);
-  ctx.fillStyle = C.nucleusOuter;
-  ctx.shadowColor = C.nucleusOuter;
-  ctx.shadowBlur = 60;
+  ctx.arc(cx, cy, rOut, 0, PI2);
+  ctx.fillStyle = C.nucleusOut;
+  ctx.shadowColor = C.nucleusOut;
+  ctx.shadowBlur = PARAMS.nucleus.glowOuter * (0.8 + mutation*0.5);
   ctx.fill();
 
   // core
   ctx.beginPath();
-  ctx.arc(cx, cy, 28*wob, 0, Math.PI*2);
+  ctx.arc(cx, cy, rCore, 0, PI2);
   ctx.fillStyle = C.nucleusCore;
   ctx.shadowColor = C.nucleusCore;
-  ctx.shadowBlur = 30;
+  ctx.shadowBlur = PARAMS.nucleus.glowCore;
   ctx.fill();
+
+  // specular glint
+  const ang = t*0.6;
+  const gx = cx + Math.cos(ang)*rCore*0.5;
+  const gy = cy + Math.sin(ang)*rCore*0.5;
+  const grad = ctx.createRadialGradient(gx, gy, 0, gx, gy, rCore*0.9);
+  grad.addColorStop(0, "rgba(255,255,255,0.45)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.arc(cx, cy, rCore*0.95, 0, PI2); ctx.fill();
   ctx.shadowBlur = 0;
 }
 
 function drawTether(cx, cy){
-  const phase = t*0.9;
-  const len = 190 + Math.sin(t*0.7)*30;
-  const a = { x: cx - Math.cos(phase)*len, y: cy - Math.sin(phase)*len };
-  const c1 = { x: lerp(a.x, cx, 0.55), y: a.y + Math.cos(t)*40 };
-  const c2 = { x: lerp(a.x, cx, 0.85), y: cy + Math.sin(t*1.1)*30 };
+  const len = PARAMS.tether.length + Math.sin(t*0.55)*20;
+  const phase = t*PARAMS.tether.wobble;
+  const ax = cx - Math.cos(phase)*len;
+  const ay = cy - Math.sin(phase)*len;
+
+  const c1 = { x: lerp(ax, cx, 0.45), y: ay + Math.cos(t*0.9)*PARAMS.tether.sway };
+  const c2 = { x: lerp(ax, cx, 0.85), y: cy + Math.sin(t*1.1)*PARAMS.tether.sway*0.6 };
 
   ctx.beginPath();
-  ctx.moveTo(a.x, a.y);
+  ctx.moveTo(ax, ay);
   ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, cx, cy);
   ctx.strokeStyle = C.tether;
-  ctx.lineWidth = 6;
+  ctx.lineWidth = PARAMS.tether.width;
   ctx.lineCap = "round";
   ctx.shadowColor = C.tether;
-  ctx.shadowBlur = 22;
+  ctx.shadowBlur = PARAMS.tether.tipGlow;
   ctx.stroke();
   ctx.shadowBlur = 0;
 }
 
 function drawMotes(w,h){
-  ctx.fillStyle = C.mote;
   for(const m of motes){
-    m.x += m.dx; m.y += m.dy;
-    // wrap
+    // parallax drift from flow
+    m.x += m.dx + (flow-0.5)*PARAMS.motes.parallax*(m.z-0.5);
+    m.y += m.dy + (flow-0.5)*PARAMS.motes.parallax*(0.5-m.z);
+
     if(m.x < -10) m.x = w+10; else if(m.x > w+10) m.x = -10;
     if(m.y < -10) m.y = h+10; else if(m.y > h+10) m.y = -10;
 
+    const tw = 0.55 + Math.sin((m.x+m.y+t)*0.5)*PARAMS.motes.twinkle;
+    ctx.globalAlpha = clamp(0.25 + tw*0.45, 0, 1);
+    ctx.fillStyle = C.mote;
     ctx.beginPath();
-    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
-    ctx.globalAlpha = 0.35 + Math.sin((m.x+m.y+t)*0.4)*0.2;
+    ctx.arc(m.x, m.y, m.r*(0.7+0.6*m.z), 0, PI2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
@@ -158,11 +209,13 @@ function drawMotes(w,h){
 
 function draw(){
   t += 0.016;
+
   const w = canvas.clientWidth, h = canvas.clientHeight;
   ctx.clearRect(0,0,w,h);
 
   drawBgFog(w,h);
 
+  // creature anchor slightly below center
   const cx = w*0.52, cy = h*0.60;
   drawEchoRings(cx, cy);
   drawTether(cx, cy);
@@ -172,14 +225,19 @@ function draw(){
   requestAnimationFrame(draw);
 }
 
-/********* Sim (stub) *********/
-function tickClock(){
-  timeEl.textContent = "Updated " + nowHHMMSS();
+/********* Sim (stub until backend) *********/
+function heartbeatHz(){
+  const bpm = lerp(PARAMS.heartbeat.bpmMin, PARAMS.heartbeat.bpmMax, clamp(health,0,1));
+  return bpm/60; // Hz
 }
+function tickClock(){ timeEl.textContent = "Updated " + nowHHMMSS(); }
 function simVitals(){
-  // tiny drifting
-  health = clamp(health + (Math.random()-0.5)*0.006, 0, 1);
-  mutation = clamp(mutation + (Math.random()-0.5)*0.004, 0, 1);
+  // health breathes with heartbeat, mutation creeps
+  const hb = Math.sin(t * heartbeatHz() * PI2) * 0.002;
+  health   = clamp(health + hb + (Math.random()-0.5)*0.004, 0, 1);
+  mutation = clamp(mutation + (Math.random()-0.5)*0.003, 0, 1);
+  // flow drifts slowly
+  flow = clamp(flow + (Math.random()-0.5)*0.02, 0, 1);
 }
 function simPrice(){
   const p = 0.01 + Math.sin(Date.now()/8000)*0.002;
@@ -189,11 +247,11 @@ function simPrice(){
 /********* Actions *********/
 feedBtn.addEventListener("click", (ev)=>{
   ev.preventDefault();
-  // give a little “life” nudge
-  health = clamp(health + 0.06, 0, 1);
-  mutation = clamp(mutation + 0.015, 0, 1);
+  // “feeding” bumps health and flow, nudges mutation slightly
+  health   = clamp(health + 0.07, 0, 1);
+  flow     = clamp(flow + 0.08, 0, 1);
+  mutation = clamp(mutation + 0.012, 0, 1);
 });
-tradeBtn.href = OPEN_SWAP_URL;
 
 /********* Boot *********/
 (function boot(){
