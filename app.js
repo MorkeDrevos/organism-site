@@ -1,6 +1,6 @@
-/* THE ORGANISM — “void-jelly xenopod”
-   One living creature: body + iris/pupil (blink), translucent fins,
-   drifting subdermal veins, breathing gill vents, and a single umbilical tether.
+/* THE ORGANISM — recognizable alien:
+   head (with blinking eyes), torso, two arms, two legs, single umbilical tether,
+   soft fins & glow, drifting stars. Pure Canvas.
 */
 
 const C = document.getElementById("org-canvas");
@@ -16,287 +16,299 @@ function resize(){
 }
 resize(); addEventListener("resize", resize);
 
-/* ===== Palette ===== */
 const PAL = {
   space: "#070914",
-  hazeMag: "rgba(200,120,255,0.06)",
-  hazeAqua:"rgba(120,200,255,0.06)",
-  core:    "rgba(250,255,255,0.95)",
-  iris:    "rgba(210,240,255,0.85)",
-  skinA:   "rgba(120,210,235,0.30)",   // membrane fill
-  skinB:   "rgba(255,120,215,0.28)",   // membrane tint
-  rimA:    "rgba(135,235,255,0.45)",   // iridescent rim
-  rimB:    "rgba(255,121,211,0.50)",
-  finA:    "rgba(110,230,230,0.25)",   // translucent fins
-  finB:    "rgba(255,140,230,0.22)",
-  vein:    "rgba(180,220,255,0.08)",
-  mote:    "rgba(210,220,255,0.75)",
-  tetherA: "rgba(255,121,211,0.85)",
-  tetherB: "rgba(120,230,255,0.85)"
+  star:  "rgba(210,220,255,.75)",
+  core:  "rgba(250,255,255,.95)",
+  skin:  "rgba(140,220,245,.20)",
+  rimA:  "rgba(135,235,255,0.45)",
+  rimB:  "rgba(255,121,211,0.50)",
+  finA:  "rgba(110,230,230,0.20)",
+  finB:  "rgba(255,140,230,0.18)",
+  vein:  "rgba(180,220,255,0.08)",
+  tetherA:"rgba(255,121,211,0.95)",
+  tetherB:"rgba(120,230,255,0.95)",
+  iris:  "rgba(210,240,255,0.9)",
+  sclera:"rgba(245,255,255,0.95)",
+  pupil: "rgba(20,30,40,.9)",
+  hazeM: "rgba(200,120,255,0.06)",
+  hazeA: "rgba(120,200,255,0.06)",
 };
 
-/* ===== Tiny value noise / fbm for organic variance ===== */
-function makeRand(seed=0xA53B9D1){ // tiny lcg
-  let s = seed>>>0;
-  return ()=>((s=Math.imul(s^0x27d4eb2f,0x165667b1))>>>0)/0xffffffff;
-}
-const rnd = makeRand();
-const perm = new Uint8Array(512);
-for (let i=0;i<256;i++) perm[i]=i;
-for (let i=255;i>0;i--){ const j=(rnd()*(i+1))|0; [perm[i],perm[j]]=[perm[j],perm[i]]; }
-for (let i=0;i<256;i++) perm[256+i]=perm[i];
+const rnd = (s=>()=> (s = (s*1664525+1013904223)>>>0, s/0xffffffff) )(0xA53B9D1);
 const lerp=(a,b,t)=>a+(b-a)*t;
-const sstep=t=>t*t*(3-2*t);
-const hash=(x,y)=>perm[(x+perm[y&255])&255];
-function vnoise(x,y){
-  const xi=x|0, yi=y|0, xf=x-xi, yf=y-yi;
-  const tl=hash(xi,yi)/255, tr=hash(xi+1,yi)/255;
-  const bl=hash(xi,yi+1)/255, br=hash(xi+1,yi+1)/255;
-  const u=sstep(xf), v=sstep(yf);
-  return lerp( lerp(tl,tr,u), lerp(bl,br,u), v );
-}
-function fbm(x,y,oct=4){ let a=.5,f=1,s=0,n=0; for(let i=0;i<oct;i++){ s+=vnoise(x*f,y*f)*a; n+=a; a*=.5; f*=2; } return s/n; }
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-/* ===== World state ===== */
-let t0 = performance.now();
-let health   = 0.62;  // 0..1
-let mutation = 0.35;  // 0..1 (unlocks fins/veins amplitude)
-const center = ()=>({ x: W*0.5, y: H*0.56 });
-
-/* ===== Stars ===== */
-const MOTES = Array.from({length: 90}, ()=>({
-  x: rnd(), y: rnd(), z: .35 + rnd()*1.1, r: .8 + rnd()*1.8, p: rnd()*6.283
+/* stars */
+const STARS = Array.from({length: 90}, ()=>({
+  x:rnd(), y:rnd(), z:.35+rnd()*1.1, r:.8+rnd()*1.8, p:rnd()*6.283
 }));
-function drawStars(t){
+
+/* life stats that can tie into your backend later */
+let health   = 0.68;  // 0..1 (affects glow + tether thickness)
+let mutation = 0.42;  // 0..1 (affects fins/veins amplitude)
+const center = ()=>({ x: W*0.5, y: H*0.58 });
+
+/* helpers */
+const S = Math.sin, Cc = Math.cos; const TAU=6.283;
+
+/* -------- backdrop -------- */
+function backdrop(t){
+  ctx.fillStyle = PAL.space; ctx.fillRect(0,0,W,H);
+
+  // nebula curtains
+  const L = ctx.createLinearGradient(0,0, W*.22,0);
+  L.addColorStop(0, PAL.hazeM); L.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=L; ctx.fillRect(0,0,W,H);
+  const R = ctx.createLinearGradient(W,0, W*.78,0);
+  R.addColorStop(0, PAL.hazeA); R.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=R; ctx.fillRect(W*.78,0, W*.22, H);
+
+  // echo rings
+  const {x:cx,y:cy}=center();
   ctx.save();
-  for (const m of MOTES){
+  ctx.globalAlpha=.10;
+  ctx.strokeStyle="rgba(150,180,230,.45)";
+  ctx.lineWidth=1*DPR;
+  for(let r=220*DPR;r<Math.max(W,H);r+=130*DPR){
+    ctx.beginPath(); ctx.arc(cx,cy, r + S(t*.33 + r*.002)*6*DPR, 0, TAU); ctx.stroke();
+  }
+  ctx.restore();
+
+  // stars
+  for(const m of STARS){
     const x = m.x*W + Math.sin(t*.07+m.p)*14*m.z;
     const y = m.y*H + Math.cos(t*.05+m.p)*16*m.z;
     ctx.globalAlpha = .18 + .7*Math.abs(Math.sin(t*.38 + m.p));
-    ctx.fillStyle = PAL.mote;
-    ctx.beginPath(); ctx.arc(x,y,m.r*DPR,0,6.283); ctx.fill();
+    ctx.fillStyle = PAL.star;
+    ctx.beginPath(); ctx.arc(x,y,m.r*DPR,0,TAU); ctx.fill();
   }
-  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
-/* ===== Creature pieces ===== */
+/* -------- creature geometry --------
+   We draw a stylized biped:
+   - Torso (rounded capsule), Head (rounded), Eyes (blink), Arms & Legs (bezier limbs).
+   - Semi-translucent fins on back, faint veins, single umbilical tether.
+*/
+function drawCreature(t){
+  const {x:cx, y:cy} = center();
 
-/* Eye (iris + pupil that blinks) */
-function drawEye(t, cx, cy){
-  const breathe = .85 + .15*Math.sin(t*1.2);
-  const rIris = 52*DPR * breathe;
-  const rCore = 22*DPR * (0.9 + 0.15*Math.sin(t*1.9));
-  // iris bloom
-  const g = ctx.createRadialGradient(cx,cy,0,cx,cy,rIris*1.9);
-  g.addColorStop(0, PAL.iris);
-  g.addColorStop(.5, "rgba(160,210,255,.22)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,rIris*1.9,0,6.283); ctx.fill();
+  // subtle body hover
+  const hoverY = 10*DPR * Math.sin(t*0.9);
+  const tilt   = 0.05*Math.sin(t*0.7);
 
-  // iris ring
-  ctx.globalAlpha=.7; ctx.lineWidth=2*DPR; ctx.strokeStyle="rgba(200,230,255,.7)";
-  ctx.beginPath(); ctx.arc(cx,cy,rIris,0,6.283); ctx.stroke();
-  ctx.globalAlpha=1;
+  // sizes
+  const torsoW = 150*DPR, torsoH = 210*DPR;
+  const headR  = 48*DPR;
 
-  // core
-  ctx.fillStyle=PAL.core; ctx.beginPath(); ctx.arc(cx,cy,rCore,0,6.283); ctx.fill();
+  ctx.save();
+  ctx.translate(cx, cy+hoverY);
+  ctx.rotate(tilt);
 
-  // pupil slit with blink
-  const blink = Math.max(0,.1 + .9*Math.abs(Math.sin(t*0.6 + Math.sin(t*.17)*.7)));
-  const slit = rCore * ( .15 + .5*blink );
-  ctx.fillStyle="rgba(20,30,40,.85)";
+  /* dorsal fins */
+  drawFin(-Math.PI*0.9, 120, 180, t);
+  drawFin( Math.PI*0.2,  140, 150, t);
+  drawFin( Math.PI*0.7,  110, 160, t);
+
+  /* torso (capsule) */
+  const grd = ctx.createLinearGradient(-torsoW*.3,-torsoH*.4, torsoW*.4, torsoH*.6);
+  grd.addColorStop(0, "rgba(120,220,245,.18)");
+  grd.addColorStop(1, "rgba(255,120,210,.16)");
+  roundedCapsule(-torsoW/2, -torsoH/2, torsoW, torsoH, 40*DPR, grd, PAL.rimA);
+
+  // faint veins across torso
+  drawVeinsField(t, -torsoW/2, -torsoH/2, torsoW, torsoH);
+
+  /* head */
+  ctx.save();
+  ctx.translate(0, -torsoH/2 - headR*0.5);
+  drawHead(t, headR);
+  ctx.restore();
+
+  /* arms */
+  const armLen = 120*DPR;
+  limbBezier(-torsoW*0.45, -torsoH*0.2, -armLen, 40*DPR, t, 0, true);   // left arm
+  limbBezier( torsoW*0.45, -torsoH*0.25,  armLen, 60*DPR, t, 1, true);  // right arm
+
+  /* legs */
+  const legLen = 140*DPR;
+  limbBezier(-torsoW*0.25,  torsoH*0.35, -legLen, 70*DPR, t, 2, false);
+  limbBezier( torsoW*0.25,  torsoH*0.35,  legLen, 70*DPR, t, 3, false);
+
+  ctx.restore();
+
+  /* umbilical tether attaches near navel */
+  const attachX = cx + Math.cos(t*0.6)*6*DPR;
+  const attachY = cy + hoverY + torsoH*0.05 + Math.sin(t*0.9)*4*DPR;
+  drawTether(t, attachX, attachY);
+}
+
+/* rounded capsule helper */
+function roundedCapsule(x,y,w,h,r, fill, rim){
+  ctx.save();
+  ctx.fillStyle = fill;
   ctx.beginPath();
-  ctx.ellipse(cx, cy, slit, rCore*.82, 0, 0, 6.283);
+  const rr = Math.min(r, Math.min(w,h)/2);
+  // top semicircle
+  ctx.moveTo(x, y+rr);
+  ctx.quadraticCurveTo(x, y, x+rr, y);
+  ctx.lineTo(x+w-rr, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+rr);
+  ctx.lineTo(x+w, y+h-rr);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-rr, y+h);
+  ctx.lineTo(x+rr, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-rr);
+  ctx.closePath();
   ctx.fill();
+
+  // rim
+  ctx.globalAlpha=.7; ctx.strokeStyle=rim; ctx.lineWidth=2*DPR;
+  ctx.stroke(); ctx.globalAlpha=1;
+  ctx.restore();
 }
 
-/* Body membrane (wobbly) */
-function drawMembrane(t, cx, cy){
-  const base = 100*DPR;
-  const rings = 4;
-  for(let k=0;k<rings;k++){
-    const r = base + k*18*DPR;
-    const amp = 8*DPR*(.4 + .8*mutation);
-    ctx.beginPath();
-    const steps=96;
-    for(let i=0;i<=steps;i++){
-      const a = (i/steps)*6.283;
-      const n = fbm(Math.cos(a)*.9+12.1+t*.2, Math.sin(a)*.9-7.7-t*.16, 3);
-      const rr = r + (n-.5)*amp;
-      const x = cx + Math.cos(a)*rr;
-      const y = cy + Math.sin(a)*rr;
-      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
-    }
-    ctx.strokeStyle = k%2?PAL.skinB:PAL.skinA;
-    ctx.lineWidth = (k===rings-1?2.2:1.4)*DPR;
-    ctx.globalAlpha = .55 - k*.1;
-    ctx.stroke();
-  }
-  ctx.globalAlpha=1;
-}
-
-/* Iridescent rimmed shell around body */
-function drawShell(cx, cy){
-  const r=155*DPR;
-  const g = ctx.createRadialGradient(cx,cy,r*.55, cx,cy,r*1.32);
-  g.addColorStop(0,"rgba(0,0,0,0)");
-  g.addColorStop(.6,"rgba(120,220,255,.10)");
-  g.addColorStop(.9,"rgba(255,120,210,.10)");
-  g.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r*1.32,0,6.283); ctx.fill();
-
-  ctx.lineWidth=2*DPR; ctx.strokeStyle=PAL.rimA; ctx.beginPath(); ctx.arc(cx,cy,r,0,6.283); ctx.stroke();
-  ctx.lineWidth=1.4*DPR; ctx.strokeStyle=PAL.rimB; ctx.beginPath(); ctx.arc(cx,cy,r*.96,0,6.283); ctx.stroke();
-}
-
-/* Translucent fins (2–3) */
-function drawFins(t, cx, cy){
-  const fins = 3;
-  for(let i=0;i<fins;i++){
-    const a0 = 1.2 + i*1.9 + Math.sin(t*.35+i)*.15;
-    const len = 120*DPR;
-    const w   = 52*DPR*(.8+.4*Math.sin(t*.7+i));
-    const x1 = cx + Math.cos(a0)*100*DPR;
-    const y1 = cy + Math.sin(a0)*100*DPR;
-    const x2 = x1 + Math.cos(a0-.8)*len;
-    const y2 = y1 + Math.sin(a0-.8)*len;
-    const x3 = x1 + Math.cos(a0+.8)*len;
-    const y3 = y1 + Math.sin(a0+.8)*len;
-
-    // gradient fin
-    const g = ctx.createLinearGradient(x1,y1, (x2+x3)/2, (y2+y3)/2);
-    g.addColorStop(0, PAL.finA);
-    g.addColorStop(1, PAL.finB);
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.moveTo(x1,y1);
-    ctx.quadraticCurveTo(cx,cy,x2,y2);
-    ctx.lineTo(x3,y3);
-    ctx.quadraticCurveTo(cx,cy,x1,y1);
-    ctx.closePath();
-    ctx.fill();
-
-    // fin edge shimmer
-    ctx.globalAlpha=.35; ctx.strokeStyle="rgba(220,245,255,.25)";
-    ctx.lineWidth=1*DPR; ctx.stroke(); ctx.globalAlpha=1;
-  }
-}
-
-/* Veins under the skin */
-function drawVeins(t, cx, cy){
+/* dorsal fin (kite-like) */
+function drawFin(angle, span, len, t){
   ctx.save();
-  ctx.strokeStyle = PAL.vein;
-  ctx.lineWidth = .9*DPR;
-  ctx.globalAlpha = .9*(.2 + .8*mutation);
-  const paths = 5;
-  for(let p=0;p<paths;p++){
-    const a = (p/paths)*6.283 + Math.sin(t*.3+p)*.4;
-    const r0 = 40*DPR, r1 = 125*DPR;
-    const x0 = cx + Math.cos(a)*r0, y0 = cy + Math.sin(a)*r0;
-    const x1 = cx + Math.cos(a+.7)*r1, y1 = cy + Math.sin(a+.7)*r1;
-    const xm = cx + Math.cos(a+.25)*90*DPR + Math.cos(t*.8+p)*20*DPR;
-    const ym = cy + Math.sin(a+.25)*90*DPR + Math.sin(t*.7+p)*18*DPR;
-    ctx.beginPath(); ctx.moveTo(x0,y0); ctx.quadraticCurveTo(xm,ym,x1,y1); ctx.stroke();
+  ctx.rotate(angle + 0.05*Math.sin(t*0.8 + angle));
+  const g = ctx.createLinearGradient(0,0, 0, len*DPR);
+  g.addColorStop(0, PAL.finA);
+  g.addColorStop(1, PAL.finB);
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.moveTo(0, 40*DPR);
+  ctx.lineTo(-span*0.4*DPR, len*DPR);
+  ctx.lineTo( span*0.4*DPR, len*DPR);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+/* veins field inside a rect */
+function drawVeinsField(t, x,y,w,h){
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x,y,w,h); ctx.clip();
+  ctx.strokeStyle = PAL.vein; ctx.lineWidth = .9*DPR;
+  const paths = 6;
+  for(let i=0;i<paths;i++){
+    const px = x + (i+0.2)/(paths-0.2)*w + Math.sin(t*.8+i)*8*DPR;
+    const y0 = y + h*0.1 + 10*DPR*Math.sin(t*.7+i);
+    const y1 = y + h*0.9 + 10*DPR*Math.cos(t*.6+i);
+    const xm = px + 30*DPR*Math.sin(t*.9+i);
+    ctx.beginPath(); ctx.moveTo(px, y0); ctx.quadraticCurveTo(xm, (y0+y1)/2, px, y1); ctx.stroke();
   }
   ctx.restore();
 }
 
-/* Gill vents (small ovals that “breathe”) */
-function drawVents(t, cx, cy){
-  const vents=4, baseR=110*DPR;
-  for(let i=0;i<vents;i++){
-    const a = 0.6 + i*.9;
-    const x = cx + Math.cos(a)*baseR;
-    const y = cy + Math.sin(a)*baseR;
-    const open = .35 + .25*Math.sin(t*2 + i);
-    ctx.fillStyle = "rgba(40,60,90,.7)";
-    ctx.beginPath();
-    ctx.ellipse(x,y, 10*DPR*open, 5*DPR, a, 0, 6.283);
-    ctx.fill();
-  }
+/* head + eyes (blink) */
+function drawHead(t, r){
+  // glow
+  const g = ctx.createRadialGradient(0,0, r*0.2, 0,0, r*1.6);
+  g.addColorStop(0, PAL.sclera);
+  g.addColorStop(1, "rgba(160,210,255,.12)");
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r*1.2,0,TAU); ctx.fill();
+
+  ctx.fillStyle="rgba(120,220,245,.22)"; ctx.beginPath(); ctx.arc(0,0,r,0,TAU); ctx.fill();
+  ctx.lineWidth=2*DPR; ctx.strokeStyle=PAL.rimA; ctx.beginPath(); ctx.arc(0,0,r,0,TAU); ctx.stroke();
+
+  // eyes (two) with blink
+  const sep = r*0.6;
+  const blink = clamp(Math.abs(Math.sin(t*1.2))*1.1, 0.15, 1); // 0.15..1
+  drawEye(-sep*0.5, -r*0.05, r*0.30, blink);
+  drawEye( sep*0.5, -r*0.05, r*0.30, blink*0.9);
 }
 
-/* Single umbilical tether */
-const Tether = (()=> {
-  let seed = rnd()*1000;
-  return {
-    draw(t,cx,cy){
-      const baseR=170*DPR;
-      const ang = t*.32 + seed;
-      const ax = cx + Math.cos(ang)*baseR;
-      const ay = cy + Math.sin(ang)*baseR;
-      const sway = 30*DPR*Math.sin(t*.8 + seed*2.1);
-      const mx = (ax+cx)/2 + Math.cos(ang+Math.PI/2)*sway;
-      const my = (ay+cy)/2 + Math.sin(ang+Math.PI/2)*sway;
-
-      const grad = ctx.createLinearGradient(ax,ay,cx,cy);
-      grad.addColorStop(0, PAL.tetherB);
-      grad.addColorStop(1, PAL.tetherA);
-      ctx.lineCap="round";
-      ctx.strokeStyle=grad;
-      ctx.lineWidth = 2.8*DPR*(.6 + .8*health*(.7+.3*Math.sin(t*1.3)));
-      ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo(mx,my,cx,cy); ctx.stroke();
-
-      // tip glow
-      const tip = ctx.createRadialGradient(cx,cy,0, cx,cy, 16*DPR);
-      tip.addColorStop(0,"rgba(255,255,255,.45)");
-      tip.addColorStop(1,"rgba(255,255,255,0)");
-      ctx.fillStyle=tip; ctx.beginPath(); ctx.arc(cx,cy,16*DPR,0,6.283); ctx.fill();
-    }
-  }
-})();
-
-/* Background curtains + echo rings */
-function backdrop(t){
-  // side curtains
-  const L = ctx.createLinearGradient(0,0, W*.25,0);
-  L.addColorStop(0, PAL.hazeMag); L.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.fillStyle=L; ctx.fillRect(0,0,W,H);
-  const R = ctx.createLinearGradient(W,0, W*.75,0);
-  R.addColorStop(0, PAL.hazeAqua); R.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.fillStyle=R; ctx.fillRect(W*.75,0, W*.25, H);
-
-  // echo rings
-  ctx.save();
-  ctx.globalAlpha = .12;
-  ctx.strokeStyle = "rgba(150,180,230,.45)";
-  ctx.lineWidth = 1*DPR;
-  const {x:cx,y:cy} = center();
-  for(let r=240*DPR; r<Math.max(W,H); r+=140*DPR){
-    ctx.beginPath(); ctx.arc(cx,cy, r + Math.sin(t*.33 + r*.002)*6*DPR, 0, 6.283); ctx.stroke();
-  }
+/* single eye */
+function drawEye(x,y, R, blink){
+  ctx.save(); ctx.translate(x,y);
+  // iris ring
+  ctx.globalAlpha=.9; ctx.strokeStyle="rgba(200,230,255,.8)"; ctx.lineWidth=1.6*DPR;
+  ctx.beginPath(); ctx.arc(0,0,R,0,TAU); ctx.stroke(); ctx.globalAlpha=1;
+  // sclera
+  ctx.fillStyle=PAL.sclera; ctx.beginPath(); ctx.arc(0,0,R*0.75,0,TAU); ctx.fill();
+  // pupil ellipse (blink compresses)
+  const ry = R*0.45*blink, rx = R*0.22;
+  ctx.fillStyle=PAL.pupil;
+  ctx.beginPath(); ctx.ellipse(0,0, rx, ry, 0, 0, TAU); ctx.fill();
+  // catchlight
+  ctx.fillStyle="rgba(255,255,255,.6)";
+  ctx.beginPath(); ctx.arc(-rx*0.7, -ry*0.6, 2.2*DPR, 0, TAU); ctx.fill();
   ctx.restore();
 }
 
-/* ===== Main loop ===== */
-function draw(){
-  requestAnimationFrame(draw);
+/* limbs (arms/legs) as bezier with gentle sway */
+function limbBezier(px, py, len, arc, t, index, isArm){
+  ctx.save();
+  const sway = (isArm? 0.4:0.25) * Math.sin(t*(isArm?1.2:.9) + index);
+  const thickness = (isArm? 5.5:7.5)*DPR * (0.6 + 0.6*health);
+  const colA = `rgba(160,230,255,${isArm?.28:.24})`.replace('?.28', isArm?'.28':'.24'); // just for readability
+
+  const mx = px + (len/2) + arc*Math.sin(t*0.8+index);
+  const my = py + (isArm?-40:60)*DPR + arc*0.4*Math.cos(t*0.7+index) + sway*20*DPR;
+
+  ctx.lineCap="round";
+  const grad = ctx.createLinearGradient(px,py, px+len, py);
+  grad.addColorStop(0, "rgba(120,220,245,.55)");
+  grad.addColorStop(1, "rgba(255,120,210,.65)");
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = thickness;
+  ctx.beginPath();
+  ctx.moveTo(px,py);
+  ctx.quadraticCurveTo(mx,my, px+len, py + (isArm? 20*DPR : 60*DPR));
+  ctx.stroke();
+
+  // claw/foot tip glow
+  const tipx = px+len, tipy = py + (isArm? 20*DPR : 60*DPR);
+  const tip = ctx.createRadialGradient(tipx,tipy,0, tipx,tipy, 10*DPR);
+  tip.addColorStop(0,"rgba(255,255,255,.35)");
+  tip.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=tip; ctx.beginPath(); ctx.arc(tipx,tipy,10*DPR,0,TAU); ctx.fill();
+
+  ctx.restore();
+}
+
+/* single umbilical tether */
+function drawTether(t, x, y){
+  const baseR=220*DPR;
+  const ang = t*.32 + 1.8;
+  const ax = x + Math.cos(ang)*baseR;
+  const ay = y + Math.sin(ang)*baseR;
+  const sway = 30*DPR*Math.sin(t*.8 + 2.1);
+  const mx = (ax+x)/2 + sway;
+  const my = (ay+y)/2 - sway*0.6;
+
+  const grad = ctx.createLinearGradient(ax,ay,x,y);
+  grad.addColorStop(0, PAL.tetherB);
+  grad.addColorStop(1, PAL.tetherA);
+  ctx.lineCap="round";
+  ctx.strokeStyle=grad;
+  ctx.lineWidth = 3.2*DPR*(.6 + .9*health*(.7+.3*Math.sin(t*1.3)));
+  ctx.beginPath(); ctx.moveTo(ax,ay); ctx.quadraticCurveTo(mx,my,x,y); ctx.stroke();
+
+  // tip glow
+  const tip = ctx.createRadialGradient(x,y,0, x,y, 18*DPR);
+  tip.addColorStop(0,"rgba(255,255,255,.45)");
+  tip.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=tip; ctx.beginPath(); ctx.arc(x,y,18*DPR,0,TAU); ctx.fill();
+}
+
+/* -------- main loop -------- */
+let t0 = performance.now();
+function frame(){
+  requestAnimationFrame(frame);
   const t=(performance.now()-t0)/1000;
 
-  // space
-  ctx.fillStyle = PAL.space; ctx.fillRect(0,0,W,H);
-
   backdrop(t);
-  drawStars(t);
-
-  const {x:cx,y:cy} = center();
-
-  drawShell(cx,cy);
-  drawFins(t,cx,cy);
-  drawVeins(t,cx,cy);
-  drawMembrane(t,cx,cy);
-  Tether.draw(t,cx,cy);
-  drawEye(t,cx,cy);
+  drawCreature(t);
 }
-draw();
+frame();
 
-/* ===== Simulate life over time (replace with real data later) ===== */
+/* -------- simple life sim (replace later) -------- */
 setInterval(()=>{
-  // Mutation wanders slowly; higher mutation => more fin sway / membrane noise
+  // mutation wanders
   mutation = clamp(mutation + (Math.random()-0.5)*0.02, 0, 1);
-  // Health breath + slight noise (affects tether thickness/brightness)
+  // health breath + slight noise
   const beat = 0.02*Math.sin(performance.now()*0.003);
-  health = clamp(health + (Math.random()-0.5)*0.014 + beat, 0.1, 0.98);
+  health = clamp(health + (Math.random()-0.5)*0.012 + beat, 0.15, 0.98);
 }, 1200);
-
-function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi,v)); }
