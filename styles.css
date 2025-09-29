@@ -1,34 +1,17 @@
-:root{
-  --ink:#cfe7ff;
-  --bg:#070b12;
-}
-*{box-sizing:border-box}
-html,body{height:100%}
+:root{ --ink:#d9ebff; }
+*{ box-sizing:border-box }
+html,body{ height:100% }
 body{
   margin:0; color:var(--ink);
-  background:#000;
-  font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-  overflow:hidden;
+  background:#000; overflow:hidden;
+  font:14px/1.4 ui-sans-serif,system-ui,Inter,Segoe UI,Roboto,Arial;
 }
-
-/* Top-left, minimal */
-.topbar{
-  position:fixed; inset:12px auto auto 16px; z-index:2;
-}
+.topbar{ position:fixed; left:16px; top:12px; z-index:2 }
 .brand{
-  margin:0;
-  letter-spacing:.15em;
-  font-weight:700;
-  font-size:14px;
-  color:rgba(207,231,255,.9);
+  margin:0; font-weight:700; letter-spacing:.12em; font-size:13px;
+  color:rgba(217,235,255,.85);
 }
-
-/* Canvas is the stage */
 #org-canvas{
   position:fixed; inset:0; width:100vw; height:100vh; display:block;
-  background: radial-gradient(1200px 900px at 52% 64%, rgba(10,14,24,.15), rgba(0,0,0,1) 70%);
-  cursor:default;
+  background: radial-gradient(1200px 900px at 60% 68%, rgba(12,16,26,.22), #000 70%);
 }
-
-/* Dark theme switch (we stay dark by default) */
-body.dark #org-canvas{ background: radial-gradient(1200px 900px at 52% 64%, rgba(12,16,26,.20), #000 70%); }
