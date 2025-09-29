@@ -67,3 +67,24 @@ body{
 .btn.ghost{ background:transparent }
 
 #org-canvas{ position:fixed; inset:0; width:100vw; height:100vh; display:block; z-index:0 }
+/* ==== Dark Theme (default womb look) ==== */
+body.dark {
+  background: radial-gradient(ellipse at center, #050505 0%, #000 100%);
+  color: #e0faff; /* faint aqua ink */
+}
+
+body.dark .chip {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(0,255,255,0.2);
+  color: #aaf;
+}
+
+body.dark .btn {
+  background: rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,0,255,0.3);
+  color: #fff;
+}
+
+body.dark #org-canvas {
+  background: radial-gradient(circle at center, #0a0a0a 0%, #000 100%);
+}
