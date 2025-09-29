@@ -47,3 +47,4 @@ const armR = limb(1.0); armR.rotation.z = -1.0; armR.position.set(0.75, 0.05, 0.
 const legL = limb(1.2); legL.rotation.z = 1.6; legL.position.set(-0.5, -0.65, 0.2);
 const legR = limb(1.15); legR.rotation.z = -1.6; legR.position.set(0.5, -0.7, 0.2);
 organism.add(armL, armR, legL, legR);
+camera.lookAt(0, 0, 0);
