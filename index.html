@@ -5,170 +5,237 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE ORGANISM</title>
   <style>
-    html,body{height:100%;margin:0}
-    body{
-      background:#060913;
-      color:#cfe3ff;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-      overflow:hidden;
+    :root{
+      --ink:#dfe7ff;
+      --bg0:#070a12;
+      --bg1:#0b0f18;
+      --mag:#ee6bd6;
+      --aqua:#74d7ff;
     }
-    header{
-      position:fixed; left:16px; top:16px;
-      padding:10px 14px; border-radius:12px;
-      border:1px solid rgba(160,210,255,.20);
-      background:rgba(10,12,18,.6); backdrop-filter:blur(6px);
-      letter-spacing:.18em; font-weight:700; font-size:14px;
-    }
-    #app{position:fixed; inset:0; display:block}
+    html,body{height:100%;margin:0;background:radial-gradient(1200px 800px at 20% 15%, #141a28 0%, var(--bg0) 45%, var(--bg1) 100%);color:var(--ink);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    #hud{position:fixed;left:14px;top:14px;padding:10px 16px;border-radius:12px;background:rgba(8,10,16,.25);backdrop-filter:blur(6px);border:1px solid rgba(120,160,255,.15);letter-spacing:.12em}
+    #app{position:fixed;inset:0;display:block}
+    canvas{display:block}
   </style>
 </head>
 <body>
-  <header>THE ORGANISM</header>
-  <canvas id="app"></canvas>
+  <div id="hud">THE ORGANISM</div>
+  <div id="app"></div>
 
-  <!-- Three.js UMD (no modules/CSP issues) -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <!-- ONE script: UMD build of Three.js -->
+  <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
 
   <script>
-  (function(){
-    const {
-      Scene, PerspectiveCamera, WebGLRenderer, Color,
-      HemisphereLight, PointLight,
-      MeshStandardMaterial, SphereGeometry, CylinderGeometry,
-      Mesh, Group, Vector3
-    } = THREE;
+  ;(() => {
+    const DPR = Math.min(2, window.devicePixelRatio || 1);
 
-    /* renderer */
-    const canvas = document.getElementById('app');
-    const renderer = new WebGLRenderer({ canvas, antialias:true, alpha:false });
-    function setSize(){
-      renderer.setSize(window.innerWidth, window.innerHeight, false);
-    }
-    setSize();
-    window.addEventListener('resize', ()=>{
-      setSize();
-      camera.aspect = window.innerWidth / window.innerHeight;
+    // ---------- Scene ----------
+    const container = document.getElementById('app');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a0f18, 0.018);
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    camera.position.set(0, 1.4, 6.2);
+    camera.lookAt(0, 0.4, 0);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(DPR);
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+
+    // Resize
+    function onResize() {
+      const w = container.clientWidth, h = container.clientHeight;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      renderer.setSize(w, h, false);
+    }
+    window.addEventListener('resize', onResize, { passive: true });
+    onResize();
+
+    // ---------- Lights ----------
+    const amb = new THREE.AmbientLight(0x91a6ff, 0.55);
+    scene.add(amb);
+
+    const key = new THREE.DirectionalLight(0xffffff, 0.9);
+    key.position.set(3, 5, 6);
+    key.castShadow = false;
+    scene.add(key);
+
+    const rim = new THREE.PointLight(0x7cd8ff, 1.4, 12);
+    rim.position.set(-3.5, 1.2, -2.5);
+    scene.add(rim);
+
+    const heartGlow = new THREE.PointLight(0xff6bd0, 0.0, 3);
+    heartGlow.position.set(0, 0.1, 0.2);
+    scene.add(heartGlow);
+
+    // ---------- Star field ----------
+    {
+      const geo = new THREE.BufferGeometry();
+      const N = 1200;
+      const pos = new Float32Array(N * 3);
+      for (let i = 0; i < N; i++) {
+        const r = 18 * Math.pow(Math.random(), 0.6);
+        const th = Math.random() * Math.PI * 2;
+        const ph = Math.acos(2 * Math.random() - 1);
+        pos[i*3+0] = r * Math.sin(ph) * Math.cos(th);
+        pos[i*3+1] = r * Math.cos(ph);
+        pos[i*3+2] = r * Math.sin(ph) * Math.sin(th);
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const mat = new THREE.PointsMaterial({ size: 0.02, color: 0xbfd7ff, transparent: true, opacity: 0.75 });
+      const stars = new THREE.Points(geo, mat);
+      scene.add(stars);
+    }
+
+    // ---------- Materials ----------
+    const skin = new THREE.MeshStandardMaterial({
+      color: 0xe9edf6,
+      roughness: 0.65,
+      metalness: 0.0,
+      emissive: new THREE.Color(0x88bfff),
+      emissiveIntensity: 0.1
     });
 
-    /* scene + camera */
-    const scene = new Scene();
-    scene.background = new Color(0x060913);
+    const headSkin = skin.clone();
+    headSkin.emissive = new THREE.Color(0xaad7ff);
+    headSkin.emissiveIntensity = 0.18;
 
-    const camera = new PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0, 6);
-    camera.lookAt(0,0,0);
+    const cordMat = new THREE.MeshStandardMaterial({
+      color: 0xf78bd3, roughness: 0.4, metalness: 0.0,
+      emissive: new THREE.Color(0xff7ad5), emissiveIntensity: 0.25
+    });
 
-    /* lighting */
-    const hemi = new HemisphereLight(0xffffff, 0x223344, 1.1);
-    scene.add(hemi);
-    const point = new PointLight(0xff99cc, 1.2, 20);
-    point.position.set(3, 3, 6);
-    scene.add(point);
+    const irisMat = new THREE.MeshStandardMaterial({
+      color: 0x8bb8ff, roughness: 0.2, metalness: 0.0,
+      emissive: 0x4ca6ff, emissiveIntensity: 0.15
+    });
 
-    /* organism group */
-    const organism = new Group();
+    const pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0f16, roughness: 0.8 });
+
+    // ---------- Helpers ----------
+    function capsuleGeometry(length = 1, radius = 0.2, segments = 12) {
+      // Fallback if CapsuleGeometry is unavailable
+      if (THREE.CapsuleGeometry) return new THREE.CapsuleGeometry(radius, Math.max(length - 2 * radius, 0.001), segments, segments);
+      const group = new THREE.Group();
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, length - 2*radius, segments), skin);
+      const sTop = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, segments), skin);
+      const sBot = sTop.clone();
+      sTop.position.y = (length/2 - radius);
+      sBot.position.y = -(length/2 - radius);
+      group.add(cyl, sTop, sBot);
+      const geo = new THREE.BufferGeometry().setFromObject(group);
+      return geo;
+    }
+
+    function tubeFromPoints(points, radius = 0.08, tubularSegments = 48) {
+      const curve = new THREE.CatmullRomCurve3(points);
+      return new THREE.TubeGeometry(curve, tubularSegments, radius, 12, false);
+    }
+
+    // ---------- Organism ----------
+    const organism = new THREE.Group();
     scene.add(organism);
-    organism.scale.set(1.7,1.7,1.7);
 
-    /* torso */
-    const matTorso = new MeshStandardMaterial({ color: 0xe9efff, roughness:.6, metalness:.15 });
-    const torsoGeo = new SphereGeometry(1, 48, 48);
-    torsoGeo.scale(1.25, 1.0, 1.1);                      // slightly oblong
-    const torso = new Mesh(torsoGeo, matTorso);
+    // Torso (small vs head; embryo proportions: head ≫ torso)
+    const torso = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 32), skin);
+    torso.position.set(0, 0.0, 0);
+    torso.scale.set(1.1, 0.85, 1.0);  // slight squish
     organism.add(torso);
 
-    /* head */
-    const matHead = new MeshStandardMaterial({ color: 0xffffff, roughness:.45, metalness:.1 });
-    const head = new Mesh(new SphereGeometry(.7, 48,48), matHead);
-    head.position.set(0.25, .95, .1);
+    // Head (big)
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.35, 40, 40), headSkin);
+    head.position.set(0.0, 0.95, 0.0);
     organism.add(head);
 
-    /* eye (iris + pupil) */
-    const iris = new Mesh(
-      new SphereGeometry(.15, 32,32),
-      new MeshStandardMaterial({ color:0x98c5ff, emissive:0x91baff, emissiveIntensity:.25 })
-    );
-    iris.position.set(0.40, .95, .35);
-    organism.add(iris);
+    // Eye
+    const iris = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 24), irisMat);
+    iris.position.set(0.38, 0.25, 1.02);
+    head.add(iris);
 
-    const pupil = new Mesh(
-      new SphereGeometry(.07, 24,24),
-      new MeshStandardMaterial({ color:0x0b0f18 })
-    );
-    pupil.position.copy(iris.position).add(new Vector3(0,0,.05));
-    organism.add(pupil);
+    const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 24), pupilMat);
+    pupil.position.set(0.03, 0.01, 0.22);
+    iris.add(pupil);
 
-    /* limb buds (capsule-ish made from cylinder + spheres) */
-    function limb(len=1.0, thick=0.09){
-      const mat = new MeshStandardMaterial({
-        color:0xf5d5ff, roughness:.7, metalness:.05,
-        emissive:0x442244, emissiveIntensity:.15
-      });
-      const g = new Group();
-      const cyl = new Mesh(new CylinderGeometry(thick, thick, len, 16), mat);
-      const s1 = new Mesh(new THREE.SphereGeometry(thick,16,16), mat);
-      const s2 = new Mesh(new THREE.SphereGeometry(thick,16,16), mat);
-      s1.position.y =  len/2; s2.position.y = -len/2;
-      g.add(cyl,s1,s2);
-      return g;
+    // Limb buds (short, curved)
+    function limb(len = 1.1, thick = 0.16) {
+      const geo = capsuleGeometry(len, thick);
+      return new THREE.Mesh(geo, skin);
     }
-    const armL = limb(1.0); armL.position.set(-0.8, 0.10, 0.2); armL.rotation.z= 1.2;
-    const armR = limb(1.0); armR.position.set( 0.8, 0.10, 0.2); armR.rotation.z=-1.2;
-    const legL = limb(1.2); legL.position.set(-0.5,-0.90, 0.2); legL.rotation.z= 1.6;
-    const legR = limb(1.2); legR.position.set( 0.5,-0.90, 0.2); legR.rotation.z=-1.6;
-    organism.add(armL,armR,legL,legR);
+    const armL = limb(1.15, 0.14); armL.position.set(-0.65, 0.05, 0.25); armL.rotation.set(0.3, 0.2, 1.2);
+    const armR = limb(1.15, 0.14); armR.position.set( 0.65, 0.05, 0.25); armR.rotation.set(0.3,-0.2,-1.2);
+    const legL = limb(1.35, 0.17); legL.position.set(-0.55,-0.65, 0.10); legL.rotation.set(0.9, 0.2, 1.0);
+    const legR = limb(1.35, 0.17); legR.position.set( 0.55,-0.65, 0.10); legR.rotation.set(0.9,-0.2,-1.0);
+    organism.add(armL, armR, legL, legR);
 
-    /* simple cord built from short cylinders along a bezier-like path */
-    function cord(segments=20){
-      const g = new Group();
-      const mat = new MeshStandardMaterial({
-        color:0xff77bb, emissive:0xff66cc, emissiveIntensity:.2, roughness:.7
-      });
-      let prev = new Vector3(0,0,0);
-      for(let i=0;i<segments;i++){
-        const t=i/(segments-1);
-        const x= -1.8*t;
-        const y= 0.2*Math.sin(t*Math.PI*2)*0.4 -0.1;
-        const z= 0.0;
-        const p=new Vector3(x,y,z);
-        if(i>0){
-          const segLen = p.clone().sub(prev).length();
-          const cyl = new Mesh(new CylinderGeometry(0.05,0.05, segLen, 10), mat);
-          cyl.position.copy(prev.clone().add(p).multiplyScalar(0.5));
-          cyl.lookAt(p);
-          cyl.rotateX(Math.PI/2);
-          g.add(cyl);
-        }
-        prev = p;
-      }
-      g.position.set(-0.1,-0.2,0.1);
-      return g;
+    // Umbilical cord (single)
+    const cordPoints = [
+      new THREE.Vector3(0.0, -0.2, 0.35),
+      new THREE.Vector3(-1.0, -0.45, 0.2),
+      new THREE.Vector3(-2.4, -0.1 + Math.random()*0.1, -0.2)
+    ];
+    const cord = new THREE.Mesh(tubeFromPoints(cordPoints, 0.07, 64), cordMat);
+    cord.castShadow = false;
+    organism.add(cord);
+
+    // Subtle rib/vertebra hint (thin rings)
+    const rings = new THREE.Group();
+    for (let i = 0; i < 7; i++) {
+      const r = 0.35 + i * 0.06;
+      const tor = new THREE.TorusGeometry(r, 0.005, 8, 60);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x8ac7ff, transparent: true, opacity: 0.08 });
+      const m = new THREE.Mesh(tor, mat);
+      m.rotation.x = Math.PI/2.8;
+      m.position.set(0, 0.05, 0.15);
+      rings.add(m);
     }
-    const cordMesh = cord();
-    organism.add(cordMesh);
+    torso.add(rings);
 
-    /* animation */
-    function animate(ms){
-      const t = ms/1000;
+    // ---------- Animation ----------
+    const t0 = performance.now();
+    function animate() {
+      const ms = performance.now() - t0;
+      const t = ms / 1000;
 
       // breathing
-      const breathe = 1+0.07*Math.sin(t*1.7);
-      torso.scale.set(1.25*breathe, 1.0*breathe, 1.1*breathe);
+      const breathe = 1.0 + 0.06 * Math.sin(t * 1.6);
+      head.scale.setScalar(1.0 * breathe);
+      torso.scale.y = 0.85 * (1.0 + 0.04 * Math.sin(t * 1.6 + 0.7));
+
+      // eye blink
+      const blink = (Math.sin(t * 3.5 + 0.6) > 0.9) ? 0.20 : 1.0;
+      iris.scale.set(1, blink, 1);
 
       // limb sway
-      armL.rotation.z = 1.2 + 0.25*Math.sin(t*1.3);
-      armR.rotation.z = -1.2 + 0.25*Math.cos(t*1.3);
-      legL.rotation.z = 1.6 + 0.18*Math.sin(t*1.1);
-      legR.rotation.z = -1.6 + 0.18*Math.cos(t*1.1);
+      const s = 0.35 * Math.sin(t * 1.3);
+      armL.rotation.z =  1.2 + s * 0.25;
+      armR.rotation.z = -1.2 - s * 0.25;
+      legL.rotation.z =  1.0 + s * 0.18;
+      legR.rotation.z = -1.0 - s * 0.18;
 
-      // subtle float
-      organism.position.y = 0.05*Math.sin(t*0.8);
+      // cord wobble
+      cord.geometry.dispose();
+      const p0 = new THREE.Vector3(0.0, -0.2, 0.35);
+      const p1 = new THREE.Vector3(-1.0, -0.45 + 0.15*Math.sin(t*1.1), 0.2 + 0.1*Math.cos(t*0.9));
+      const p2 = new THREE.Vector3(-2.4, -0.1 + 0.1*Math.cos(t*0.7), -0.2 + 0.05*Math.sin(t*0.6));
+      cord.geometry = tubeFromPoints([p0, p1, p2], 0.07, 64);
 
-      renderer.render(scene,camera);
+      // soft heart glow pulse
+      heartGlow.intensity = 0.5 + 0.45 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.2), 2);
+
+      // gentle float
+      organism.position.y = 0.06*Math.sin(t*0.9);
+      organism.rotation.y = 0.06*Math.sin(t*0.5);
+      organism.rotation.x = 0.02*Math.cos(t*0.6);
+
+      renderer.render(scene, camera);
       requestAnimationFrame(animate);
     }
-    requestAnimationFrame(animate);
+    animate();
   })();
   </script>
 </body>
