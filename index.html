@@ -7,55 +7,52 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
-  <!-- Title -->
-  <header class="hero">
+  <!-- Top bar -->
+  <header class="topbar">
     <h1>ORGANISM.<span class="zero">ZERO</span></h1>
-  </header>
-
-  <!-- Background creature -->
-  <canvas id="org-canvas"></canvas>
-
-  <!-- Top chips (match your current positions) -->
-  <div class="top">
+    <div class="spacer"></div>
     <div class="chips">
       <span class="chip">$<span id="priceLabel">0.01</span></span>
       <span class="chip">Updated <span id="updatedLabel">--:--:--</span></span>
-    </div>
-    <div class="chips">
       <a id="feedBtn" class="btn">Feed</a>
       <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener">Open Swap</a>
     </div>
-  </div>
+  </header>
 
-  <!-- Left: Evolution Log (replaces Feeding/Starving) -->
-  <aside class="evo card">
-    <div class="card-head">
-      <h3>Evolution Log <span class="live-dot">Live</span></h3>
+  <!-- Background organism -->
+  <canvas id="org-canvas"></canvas>
+
+  <!-- Slim right panel -->
+  <aside class="panel">
+    <div class="row">
+      <span>Health</span><span id="healthPct">0%</span>
     </div>
-    <ul id="evoList" class="elog"></ul>
-  </aside>
-
-  <!-- Right stack: Traits + slim stats -->
-  <aside class="traits card">
-    <div class="card-head"><h3>Traits</h3></div>
-    <div id="traitsGrid" class="tgrid"></div>
-  </aside>
-
-  <aside class="stats card">
-    <div class="row"><span>Health</span><span id="healthPct">0%</span></div>
     <div class="bar aqua"><span id="healthBar" style="width:0%"></span></div>
 
-    <div class="row"><span>Mutation</span><span id="mutPct">0%</span></div>
+    <div class="row">
+      <span>Mutation</span><span id="mutPct">0%</span>
+    </div>
     <div class="bar mag"><span id="mutBar" style="width:0%"></span></div>
+
+    <div class="sigils">
+      <div class="sigil" id="sigil-biolume" title="Biolume Rings"></div>
+      <div class="sigil mag" id="sigil-echo" title="Echo Pulse"></div>
+      <div class="sigil" id="sigil-tether" title="Tether Cord"></div>
+    </div>
   </aside>
 
-  <!-- Footer status -->
+  <!-- Bottom status + ticker -->
   <footer class="status">
     <div class="left">
       Stage <span id="stageChip">1</span> • <span id="lifeChipFoot">alive</span> • stable •
       $<span id="priceFoot">0.01</span> • <span id="clock">--:--:--</span>
     </div>
+
     <div class="meter"><span id="flowBar"></span></div>
+
+    <div class="ticker" id="ticker">
+      <!-- events slide left here -->
+    </div>
   </footer>
 
   <script src="/app.js"></script>
