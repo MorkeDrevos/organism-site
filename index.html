@@ -1,228 +1,221 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>THE ORGANISM</title>
-<style>
-  :root{
-    --ink:#dfe7ff;       /* text */
-    --bg0:#070a14;       /* deep space */
-    --bg1:#0a0f1e;
-    --aqua:#7ad5ff;      /* aqua glow */
-    --mag:#ff77d8;       /* magenta glow */
-    --mote:#cfe3ffcc;
-  }
-  html,body{height:100%}
-  body{margin:0;background:radial-gradient(100% 120% at 70% 100%, #121b2f 0%, var(--bg0) 45%) no-repeat; color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; overflow:hidden;}
-  #hud{position:fixed; left:14px; top:14px; padding:8px 14px; border:1px solid #1e2a44; border-radius:12px; color:#cfe3ff; letter-spacing:.15em; font-weight:650; text-transform:uppercase; background:rgba(10,18,34,.35); backdrop-filter: blur(6px)}
-  canvas{display:block; position:fixed; inset:0;}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>THE ORGANISM</title>
+  <style>
+    :root{
+      --ink:#dfe7ff;      /* text tint (logo only) */
+      --bg1:#0a0f20;      /* deep space */
+      --bg2:#060912;      /* deeper */
+      --nebA:rgba(200,40,200,.08);
+      --nebB:rgba(40,200,255,.07);
+      --ring:rgba(120,180,220,.18);
+
+      /* organism palette */
+      --skin:rgba(230,236,246,.16);
+      --rim :rgba(150,210,255,.28);
+      --head:#eef6ff;
+      --iris:rgba(120,180,255,.85);
+      --pupil:#0b0f18;
+      --cord:rgba(255,150,210,.95);
+      --cordGlow:rgba(255,140,220,.28);
+    }
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(circle at 20% 15%, #0d1330 0%, #070a18 40%, var(--bg2) 85%);
+      color:var(--ink);
+      font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow:hidden;
+    }
+    /* tiny top-left wordmark (kept minimal) */
+    .brand{
+      position:fixed; left:14px; top:14px;
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.06);
+      padding:10px 14px; border-radius:10px;
+      letter-spacing:.24em; font-weight:650; font-size:13px; color:var(--ink);
+      backdrop-filter: blur(6px);
+      z-index:3;
+    }
+
+    /* full-bleed canvas */
+    #org-canvas{
+      position:fixed; inset:0; display:block; z-index:1;
+    }
+  </style>
 </head>
 <body>
-  <div id="hud">THE ORGANISM</div>
-  <canvas id="org"></canvas>
+  <div class="brand">THE ORGANISM</div>
+  <canvas id="org-canvas"></canvas>
 
-<script>
-(() => {
-/* ========= Canvas bootstrap ========= */
-const canvas = document.getElementById('org');
-const ctx     = canvas.getContext('2d', { alpha:true });
-let DPR = Math.min(2, window.devicePixelRatio||1);
-function resize(){
-  const w = innerWidth, h = innerHeight;
-  canvas.width  = Math.floor(w * DPR);
-  canvas.height = Math.floor(h * DPR);
-  ctx.setTransform(DPR,0,0,DPR,0,0);
-}
-addEventListener('resize', resize, {passive:true});
-resize();
+  <script>
+  /******** Canvas bootstrap ********/
+  const canvas = document.getElementById('org-canvas');
+  const ctx    = canvas.getContext('2d', { alpha:true });
+  let DPR = Math.min(2, window.devicePixelRatio || 1);
 
-/* ========= Time ========= */
-let t0 = performance.now();
-const now = () => (performance.now()-t0)/1000;
-
-/* ========= Palette ========= */
-const PAL = {
-  space0:'#0a0f1e',
-  aqua: 'rgba(120,210,255, .55)',
-  aquaSoft:'rgba(140,220,255, .20)',
-  mag:  'rgba(255,120,220, .55)',
-  magSoft:'rgba(255,120,220, .20)',
-  skin:'rgba(230,236,246, .18)',
-  head:'#f4fbff',
-  eyeIris:'rgba(110,170,255,.9)',
-  eyePupil:'#0b0f18',
-  cord:'rgba(255,155,215,.95)',
-  cordGlow:'rgba(255,130,220,.28)',
-  rib:'#cfe3ff22',
-  ring:'rgba(120,180,220,.18)',
-  mote:'rgba(210,230,255,.55)'
-};
-
-/* ========= Scene motes/starfield ========= */
-const RND = (a,b)=> a + Math.random()*(b-a);
-const MOTES = Array.from({length:120}, () => ({
-  x: Math.random(), y: Math.random(), z: RND(.4,1.4), d:RND(-.02,.02)
-}));
-
-function background(t){
-  const w=canvas.width/DPR, h=canvas.height/DPR;
-
-  // deep vignette
-  const g = ctx.createRadialGradient(w*0.75, h*1.1, 40, w*0.5, h*0.6, Math.max(w,h));
-  g.addColorStop(0,'#0e1530');
-  g.addColorStop(1,PAL.space0);
-  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
-
-  // nebula veils
-  ctx.save();
-  ctx.globalCompositeOperation = 'screen';
-  ctx.filter = 'blur(40px)';
-  ctx.fillStyle = PAL.magSoft;
-  ctx.beginPath(); ctx.ellipse(w*.18, h*.25, w*.55, h*.4, 0, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = PAL.aquaSoft;
-  ctx.beginPath(); ctx.ellipse(w*.88, h*.85, w*.5, h*.45, 0, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-
-  // motes
-  for(const m of MOTES){
-    m.x += (0.00045 + m.d*0.15);
-    if(m.x>1){ m.x=0; m.y=Math.random(); }
-    const x=w*m.x, y=h*m.y, r=(m.z*.7+.25)*(1+.25*Math.sin(t*.8+m.x*17));
-    ctx.fillStyle=PAL.mote; ctx.fillRect(x,y,r,r);
+  function resize(){
+    const w = canvas.clientWidth  || innerWidth;
+    const h = canvas.clientHeight || innerHeight;
+    canvas.width  = Math.floor(w * DPR);
+    canvas.height = Math.floor(h * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
   }
-}
+  addEventListener('resize', resize, {passive:true});
+  resize();
 
-/* ========= Echo rings (faint) ========= */
-function echo(cx,cy,scale,t){
-  ctx.save(); ctx.lineWidth=.9*scale;
-  for(let i=0;i<8;i++){
-    const r=(120+i*28)*scale*(1+.01*Math.sin(t*.7+i));
-    ctx.strokeStyle = PAL.ring;
-    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
-  }
-  ctx.restore();
-}
+  /******** Time ********/
+  let t0 = performance.now();
+  const nowS = () => (performance.now() - t0) / 1000;
 
-/* ========= Helper (rounded cap Bézier limb) ========= */
-function limbArc(ax,ay,len,rot,thick,phase,t,color){
-  ctx.save();
-  ctx.translate(ax,ay);
-  ctx.rotate(rot + .25*Math.sin(t*1.3+phase));
-  ctx.strokeStyle = color;
-  ctx.lineWidth = thick;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.arc(0,0,len, .15*Math.PI, .85*Math.PI);
-  ctx.stroke();
-  ctx.restore();
-}
+  /******** Stars / motes ********/
+  const RND=(a,b)=>a+Math.random()*(b-a);
+  const MOTES = Array.from({length:90},()=>({
+    x:Math.random(), y:Math.random(), z:RND(.4,1.4), d:RND(-.02,.02)
+  }));
 
-/* ========= The organism =========
-   Anatomy cues:
-   - Big round head (iris + pupil + blink) => clearly "face".
-   - Elliptical torso with faint ribs/spine.
-   - Four limb buds that sway.
-   - Single umbilical cord attaching low belly; tip glows.
-*/
-function drawOrganism(cx,cy,scale,t){
-  const breathe = 1 + .08*Math.sin(t*0.9);
-  const pulse   = (0.5+0.5*Math.sin(t*1.25))**2;
+  /******** Background ********/
+  function drawBackground(t){
+    const w = canvas.width / DPR, h = canvas.height / DPR;
 
-  /* halo */
-  const halo = ctx.createRadialGradient(cx,cy,8*scale, cx,cy,160*scale);
-  halo.addColorStop(0,`rgba(200,220,255,${.18+.15*pulse})`);
-  halo.addColorStop(1,'transparent');
-  ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(cx,cy,160*scale,0,Math.PI*2); ctx.fill();
+    // deep gradient
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0, getCSS('--bg1')); g.addColorStop(1, getCSS('--bg2'));
+    ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
 
-  /* torso (slightly angled) */
-  const torsoW = 110*scale, torsoH = 76*scale;
-  ctx.save();
-  ctx.translate(cx, cy+8*scale);
-  ctx.rotate(-0.12);
-  ctx.fillStyle = PAL.skin;
-  ctx.strokeStyle = `rgba(150,210,255, ${.22+.16*pulse})`;
-  ctx.lineWidth = 2.2*scale;
-  ctx.beginPath();
-  ctx.ellipse(0,0, torsoW*breathe, torsoH, 0, 0, Math.PI*2);
-  ctx.fill(); ctx.stroke();
-
-  // ribs / vertebra hints
-  ctx.strokeStyle = PAL.rib; ctx.lineWidth = 1.1*scale;
-  for(let i=0;i<6;i++){
+    // soft nebula curtains
+    ctx.save();
+    ctx.globalCompositeOperation='screen';
+    ctx.filter='blur(30px)';
+    ctx.fillStyle=getCSS('--nebA');
     ctx.beginPath();
-    ctx.ellipse(-8*scale, 4*scale + i*7*scale, torsoW*.72, torsoH*.42, -0.25, .1*Math.PI, .9*Math.PI);
-    ctx.stroke();
+    ctx.ellipse(w*.22,h*.30,w*.55,h*.55,0,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle=getCSS('--nebB');
+    ctx.beginPath();
+    ctx.ellipse(w*.86,h*.80,w*.60,h*.52,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    // motes
+    for(const m of MOTES){
+      m.x += (0.0006 + m.d*0.2);
+      if(m.x>1){ m.x=0; m.y=Math.random(); }
+      const x=w*m.x, y=h*m.y, r=(m.z*.7+.3)*(1+.25*Math.sin(t*.8 + m.x*17));
+      ctx.fillStyle='rgba(220,230,255,.55)'; ctx.fillRect(x,y,r,r);
+    }
   }
-  ctx.restore();
 
-  /* head */
-  const headR = 46*scale*breathe;
-  const headX = cx + headR*.05;
-  const headY = cy - headR*.7;
+  /******** Echo rings ********/
+  function echo(cx,cy,scale,t){
+    ctx.save(); ctx.lineWidth=.9*scale;
+    for(let i=0;i<7;i++){
+      const r=(110+i*28)*scale*(1+.01*Math.sin(t*.7+i));
+      ctx.strokeStyle=getCSS('--ring');
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  }
 
-  // outer glow rim
-  ctx.beginPath(); ctx.arc(headX,headY, headR+2*scale, 0, Math.PI*2);
-  ctx.strokeStyle = `rgba(120,200,255, ${.35+.2*pulse})`;
-  ctx.lineWidth = 3*scale; ctx.stroke();
+  /******** Embryo silhouette (head, torso, limb buds, cord) ********/
+  function drawEmbryo(cx,cy,scale,t){
+    const breathe = 1 + .06*Math.sin(t*.9);
+    const pulse   = (0.5+0.5*Math.sin(t*1.2))**2;
 
-  // head fill
-  ctx.fillStyle = PAL.head;
-  ctx.beginPath(); ctx.arc(headX,headY, headR, 0, Math.PI*2); ctx.fill();
+    // proportions
+    const headR = 50*scale*breathe;
+    const torsoW= 86*scale, torsoH=60*scale;
+    const limb  = 54*scale;
 
-  // iris + pupil + blink
-  const irisR = 9.5*scale, pupilR = 4.6*scale;
-  const eyeX  = headX + headR*.18;
-  const eyeY  = headY - headR*.02 + headR*.03*Math.sin(t*2.2);
-  const blink = (Math.sin(t*3.2+0.7) > .92)? .12 : 1;
-  ctx.fillStyle = PAL.eyeIris;  ctx.beginPath(); ctx.arc(eyeX,eyeY, irisR*blink, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = PAL.eyePupil; ctx.beginPath(); ctx.arc(eyeX,eyeY, pupilR*blink, 0, Math.PI*2); ctx.fill();
+    ctx.save();
 
-  /* limb buds */
-  const limbLen = 52*scale, thick = 6.2*scale;
-  limbArc(cx-18*scale, cy- 6*scale, limbLen*.70, -0.78, thick, 0.1, t, PAL.mag); // arm L
-  limbArc(cx+16*scale, cy- 2*scale, limbLen*.68,  0.86, thick, 0.3, t, PAL.mag); // arm R
-  limbArc(cx-12*scale, cy+30*scale, limbLen*.78, -0.96, thick, 0.6, t, PAL.mag); // leg L
-  limbArc(cx+14*scale, cy+28*scale, limbLen*.75,  0.98, thick, 0.9, t, PAL.mag); // leg R
+    // halo / presence
+    const halo=ctx.createRadialGradient(cx,cy,6*scale,cx,cy,150*scale);
+    halo.addColorStop(0,`rgba(200,220,255,${.16+.14*pulse})`);
+    halo.addColorStop(1,'transparent');
+    ctx.fillStyle=halo; ctx.beginPath(); ctx.arc(cx,cy,150*scale,0,Math.PI*2); ctx.fill();
 
-  /* umbilical cord */
-  const ph = t*.8;
-  const endX = cx - 170*scale;
-  const endY = cy + 28*scale + 16*scale*Math.sin(ph);
-  const c1x = cx - 46*scale,  c1y = cy +  8*scale + 16*scale*Math.sin(ph*1.2);
-  const c2x = cx - 120*scale, c2y = cy + 34*scale + 12*scale*Math.cos(ph*.9);
-  ctx.save();
-  ctx.lineCap='round';
-  ctx.shadowBlur = 14*scale; ctx.shadowColor = PAL.cordGlow;
-  ctx.strokeStyle = PAL.cord; ctx.lineWidth = 6.0*scale;
-  ctx.beginPath(); ctx.moveTo(cx-6*scale, cy+18*scale);
-  ctx.bezierCurveTo(c1x,c1y, c2x,c2y, endX,endY);
-  ctx.stroke();
-  ctx.shadowBlur=0;
-  ctx.fillStyle = PAL.cordGlow; ctx.beginPath(); ctx.arc(endX,endY,8*scale*(.8+.3*pulse),0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
+    // torso
+    ctx.fillStyle=getCSS('--skin');
+    ctx.strokeStyle=`rgba(160,210,255,${.20+.20*pulse})`;
+    ctx.lineWidth=2.2*scale;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy+8*scale, torsoW, torsoH, 0.18, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
 
-/* ========= Main loop ========= */
-function draw(){
-  const t  = now();
-  const w  = canvas.width / DPR;
-  const h  = canvas.height / DPR;
+    // hint ribs
+    ctx.strokeStyle='rgba(200,220,255,.10)'; ctx.lineWidth=1.2*scale;
+    for(let i=0;i<6;i++){
+      ctx.beginPath();
+      ctx.ellipse(cx-6*scale, cy+10*scale+i*6*scale, torsoW*.75, torsoH*.45, -0.25, .1*Math.PI, .9*Math.PI);
+      ctx.stroke();
+    }
 
-  background(t);
+    // head + rim
+    ctx.beginPath(); ctx.arc(cx+headR*.15, cy-headR*.35, headR, 0, Math.PI*2);
+    ctx.fillStyle=getCSS('--head'); ctx.fill();
+    ctx.strokeStyle=`rgba(120,200,255,${.28+.22*pulse})`; ctx.lineWidth=3*scale; ctx.stroke();
 
-  // organism anchor (slight float)
-  const cx = w * 0.48;
-  const cy = h * 0.58 + Math.sin(t*0.6)*6;
-  const scale = Math.min(w,h) / 900; // responsive
+    // iris/pupil + blink
+    const eyeX=cx+headR*.22, eyeY=cy-headR*.37 + headR*.04*Math.sin(t*2.4);
+    const blink = (Math.sin(t*3.4+0.6) > .92)? .12 : 1;
+    ctx.fillStyle=getCSS('--iris'); ctx.beginPath(); ctx.arc(eyeX,eyeY,9*scale*blink,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=getCSS('--pupil'); ctx.beginPath(); ctx.arc(eyeX,eyeY,4.4*scale*blink,0,Math.PI*2); ctx.fill();
 
-  echo(cx,cy,scale,t);
-  drawOrganism(cx,cy,scale,t);
+    // limb buds (arcs that sway)
+    ctx.strokeStyle=`rgba(255,160,240,${.30+.12*pulse})`; ctx.lineWidth=3*scale;
+    const bud=(ax,ay,len,rot,phase)=>{
+      ctx.save(); ctx.translate(ax,ay); ctx.rotate(rot + .28*Math.sin(t*1.25+phase));
+      ctx.beginPath(); ctx.arc(0,0,len,.1*Math.PI,.85*Math.PI); ctx.stroke(); ctx.restore();
+    };
+    bud(cx-18*scale, cy- 6*scale, limb*.66, -0.75, 0.1); // left arm
+    bud(cx+16*scale, cy- 4*scale, limb*.60,  0.82, 0.3); // right arm
+    bud(cx-12*scale, cy+28*scale, limb*.72, -0.92, 0.6); // left leg
+    bud(cx+14*scale, cy+26*scale, limb*.68,  0.96, 0.9); // right leg
 
-  requestAnimationFrame(draw);
-}
-draw();
-})();</script>
+    // umbilical cord
+    const ph=t*.85, tail=160*scale;
+    const endX=cx-tail*.9, endY=cy+22*scale + 12*scale*Math.sin(ph);
+    const c1x=cx-40*scale, c1y=cy+10*scale + 18*scale*Math.sin(ph*1.2);
+    const c2x=cx-96*scale, c2y=cy+28*scale + 12*scale*Math.cos(ph*.9);
+    ctx.lineCap='round'; ctx.shadowBlur=12*scale; ctx.shadowColor=getCSS('--cordGlow');
+    ctx.strokeStyle=getCSS('--cord'); ctx.lineWidth=5.2*scale;
+    ctx.beginPath(); ctx.moveTo(cx-6*scale, cy+20*scale);
+    ctx.bezierCurveTo(c1x,c1y, c2x,c2y, endX,endY); ctx.stroke();
+    ctx.shadowBlur=0;
+    ctx.fillStyle=getCSS('--cordGlow'); ctx.beginPath();
+    ctx.arc(endX,endY,6*scale*(.8+.3*pulse),0,Math.PI*2); ctx.fill();
+
+    ctx.restore();
+  }
+
+  /******** Main loop ********/
+  function draw(){
+    const t = nowS();
+    const w = canvas.width / DPR, h = canvas.height / DPR;
+
+    // centered & readable scale
+    const cx = w * 0.5;
+    const cy = h * 0.5;
+    const scale = Math.min(w,h) / 600;   // ↑ bigger than before so it’s visible
+
+    drawBackground(t);
+    echo(cx,cy,scale,t);
+    drawEmbryo(cx,cy,scale,t);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  /******** utils ********/
+  function getCSS(name){
+    // returns CSS variable as computed color string
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  </script>
 </body>
 </html>
