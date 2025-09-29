@@ -1,10 +1,6 @@
 :root{
-  --ink: #eaf2ff;
-  --fg:  #a5b7ff;
-  --bg0:#060913;
-  --bg1:#0a1020;
-  --aqua:#7de1ff;
-  --mag:#ff6bd6;
+  --ink:#eaf2ff; --fg:#a5b7ff;
+  --bg0:#060913; --bg1:#0a1020;
 }
 
 *{box-sizing:border-box}
@@ -12,40 +8,20 @@ html,body{height:100%}
 body{
   margin:0;
   color:var(--ink);
-  font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-  background: radial-gradient(1000px 700px at 85% 90%, #1b1227 0%, transparent 50%) ,
+  font:14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial;
+  background: radial-gradient(1000px 700px at 85% 90%, #1b1227 0%, transparent 50%),
               radial-gradient(1200px 900px at 10% 0%,  #11233a 0%, transparent 45%),
               linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
   overflow:hidden;
 }
 
 .topbar{
-  position:fixed;
-  left:12px; top:10px;
-  z-index:2;
-  backdrop-filter: blur(4px);
-  background: rgba(10,16,32,.25);
+  position:fixed; left:12px; top:10px; z-index:2;
+  backdrop-filter:blur(4px);
+  background:rgba(10,16,32,.25);
   border:1px solid rgba(140,170,255,.15);
-  border-radius:12px;
-  padding:8px 12px;
+  border-radius:12px; padding:8px 12px;
 }
-.brand{
-  letter-spacing:.24em;
-  font-weight:700;
-  color:var(--fg);
-}
+.brand{ letter-spacing:.24em; font-weight:700; color:#a5b7ff; }
 
-#app{
-  position:fixed; inset:0;
-}
-
-/* tiny hint rings overlay (canvas-less) */
-.rings{
-  position:absolute; inset:0;
-  pointer-events:none;
-  opacity:.08;
-  background:
-    radial-gradient(circle at 50% 60%, transparent 0 140px, #b6cfff 141px 142px, transparent 143px 180px),
-    radial-gradient(circle at 50% 60%, transparent 0 200px, #b6cfff 201px 202px, transparent 203px 240px),
-    radial-gradient(circle at 50% 60%, transparent 0 260px, #b6cfff 261px 262px, transparent 263px 300px);
-}
+#app{ position:fixed; inset:0 } /* makes the canvas fill the screen */
