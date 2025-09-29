@@ -10,7 +10,93 @@
   <header class="topbar">
     <div class="brand">THE ORGANISM</div>
   </header>
-  <canvas id="org-canvas"></canvas>
+
+  <!-- Scene -->
+  <main id="scene">
+    <!-- Cosmic rings (CSS draws the background; this is just a holder) -->
+    <div class="rings"></div>
+
+    <!-- Creature (SVG) -->
+    <svg id="organism" viewBox="0 0 800 600" aria-label="embryo-like organism" role="img">
+      <defs>
+        <!-- soft outer glow -->
+        <filter id="outerGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur"/>
+          <feColorMatrix in="blur" type="matrix"
+            values="0 0 0 0 0.78
+                    0 0 0 0 0.88
+                    0 0 0 0 1
+                    0 0 0 0.35 0" />
+          <feMerge>
+            <feMergeNode/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+
+        <!-- inner skin blur -->
+        <filter id="skinBlur" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2"/>
+        </filter>
+
+        <!-- specular dot -->
+        <radialGradient id="spec" cx="55%" cy="35%" r="55%">
+          <stop offset="0%" stop-color="rgba(255,255,255,.9)"/>
+          <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+
+      <g id="creature" transform="translate(400,320)">
+        <!-- breathing scale on whole body -->
+        <g id="breath">
+          <!-- belly/torso -->
+          <ellipse id="torso" rx="120" ry="80" fill="rgba(210,220,240,0.16)"
+                   stroke="rgba(150,210,255,0.25)" stroke-width="3"
+                   transform="rotate(-10)" filter="url(#skinBlur)"/>
+
+          <!-- hint ribs -->
+          <g opacity="0.25" stroke="rgba(200,220,255,0.12)" fill="none">
+            <ellipse rx="95" ry="45" transform="translate(-10,6) rotate(-15)"/>
+            <ellipse rx="85" ry="40" transform="translate(-8,14) rotate(-15)"/>
+            <ellipse rx="75" ry="34" transform="translate(-6,22) rotate(-15)"/>
+          </g>
+
+          <!-- head group (blink mask via scaleY) -->
+          <g id="head" transform="translate(50,-80)">
+            <circle r="58" fill="rgba(238,246,255,1)" filter="url(#outerGlow)"/>
+            <!-- iris + pupil -->
+            <g id="eye" transform="translate(12,-8)">
+              <circle r="12" fill="rgba(120,180,255,.9)"/>
+              <circle r="6"  fill="#0b0f18"/>
+              <!-- blink lid -->
+              <rect id="blinkLid" x="-16" y="-16" width="32" height="32"
+                    fill="rgba(20,24,32,0.85)" rx="16" ry="16"
+                    transform="scale(1,0.05)"/>
+            </g>
+            <!-- tiny specular -->
+            <circle r="58" fill="url(#spec)" />
+          </g>
+
+          <!-- limb buds (simple arcs that we’ll sway in JS) -->
+          <g id="limbs" stroke="rgba(255,160,240,.45)" stroke-width="8" stroke-linecap="round" fill="none">
+            <!-- arms -->
+            <path id="armL" d="M -60,-20 q -40,10 -60,40" />
+            <path id="armR" d="M  40,-10 q  40,10  60,40" />
+            <!-- legs -->
+            <path id="legL" d="M -40, 50 q -50,30 -70,70" />
+            <path id="legR" d="M  30, 52 q  50,30  70,70" />
+          </g>
+
+          <!-- umbilical cord (single spline; JS animates control points) -->
+          <path id="cord" stroke="rgba(255,150,210,0.95)" stroke-width="10"
+                stroke-linecap="round" fill="none" />
+
+          <!-- glowing tip -->
+          <circle id="cordTip" r="8" fill="rgba(255,140,220,.35)"/>
+        </g>
+      </g>
+    </svg>
+  </main>
+
   <script src="app.js"></script>
 </body>
 </html>
