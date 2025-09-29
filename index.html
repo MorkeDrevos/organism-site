@@ -3,20 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ORGANISM.ZERO — Amoeba</title>
+  <title>The Organism</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body class="dark">
-  <!-- Creature canvas -->
-  <canvas id="org-canvas"></canvas>
+  <!-- Top brand bar -->
+  <header class="topbar">
+    <div class="brand">
+      <!-- Simple glowing logo (circle + nucleus) -->
+      <div class="logo">
+        <span class="orb"></span>
+      </div>
+      <h1 class="title">THE <span>ORGANISM</span></h1>
+    </div>
+  </header>
 
-  <!-- Tiny toolbar (kept minimal) -->
-  <div class="toolbar">
-    <span class="brand">ORGANISM.<b>ZERO</b></span>
-    <div class="spacer"></div>
-    <button id="feedBtn" class="btn">Feed</button>
-    <a id="tradeBtn" class="btn ghost" target="_blank" rel="noopener" href="#">Open Swap</a>
-  </div>
+  <!-- The creature fills screen -->
+  <canvas id="org-canvas"></canvas>
 
   <script src="app.js"></script>
 </body>
