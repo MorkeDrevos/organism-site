@@ -2,17 +2,174 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>THE ORGANISM</title>
-  <link rel="stylesheet" href="styles.css" />
-  <!-- Three.js only (no examples needed) -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <style>
+    html,body{height:100%;margin:0}
+    body{
+      background:#060913;
+      color:#cfe3ff;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      overflow:hidden;
+    }
+    header{
+      position:fixed; left:16px; top:16px;
+      padding:10px 14px; border-radius:12px;
+      border:1px solid rgba(160,210,255,.20);
+      background:rgba(10,12,18,.6); backdrop-filter:blur(6px);
+      letter-spacing:.18em; font-weight:700; font-size:14px;
+    }
+    #app{position:fixed; inset:0; display:block}
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">THE ORGANISM</div>
-  </header>
-  <div id="app"></div>
-  <script src="app.js"></script>
+  <header>THE ORGANISM</header>
+  <canvas id="app"></canvas>
+
+  <!-- Three.js UMD (no modules/CSP issues) -->
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+
+  <script>
+  (function(){
+    const {
+      Scene, PerspectiveCamera, WebGLRenderer, Color,
+      HemisphereLight, PointLight,
+      MeshStandardMaterial, SphereGeometry, CylinderGeometry,
+      Mesh, Group, Vector3
+    } = THREE;
+
+    /* renderer */
+    const canvas = document.getElementById('app');
+    const renderer = new WebGLRenderer({ canvas, antialias:true, alpha:false });
+    function setSize(){
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+    }
+    setSize();
+    window.addEventListener('resize', ()=>{
+      setSize();
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+    });
+
+    /* scene + camera */
+    const scene = new Scene();
+    scene.background = new Color(0x060913);
+
+    const camera = new PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 6);
+    camera.lookAt(0,0,0);
+
+    /* lighting */
+    const hemi = new HemisphereLight(0xffffff, 0x223344, 1.1);
+    scene.add(hemi);
+    const point = new PointLight(0xff99cc, 1.2, 20);
+    point.position.set(3, 3, 6);
+    scene.add(point);
+
+    /* organism group */
+    const organism = new Group();
+    scene.add(organism);
+    organism.scale.set(1.7,1.7,1.7);
+
+    /* torso */
+    const matTorso = new MeshStandardMaterial({ color: 0xe9efff, roughness:.6, metalness:.15 });
+    const torsoGeo = new SphereGeometry(1, 48, 48);
+    torsoGeo.scale(1.25, 1.0, 1.1);                      // slightly oblong
+    const torso = new Mesh(torsoGeo, matTorso);
+    organism.add(torso);
+
+    /* head */
+    const matHead = new MeshStandardMaterial({ color: 0xffffff, roughness:.45, metalness:.1 });
+    const head = new Mesh(new SphereGeometry(.7, 48,48), matHead);
+    head.position.set(0.25, .95, .1);
+    organism.add(head);
+
+    /* eye (iris + pupil) */
+    const iris = new Mesh(
+      new SphereGeometry(.15, 32,32),
+      new MeshStandardMaterial({ color:0x98c5ff, emissive:0x91baff, emissiveIntensity:.25 })
+    );
+    iris.position.set(0.40, .95, .35);
+    organism.add(iris);
+
+    const pupil = new Mesh(
+      new SphereGeometry(.07, 24,24),
+      new MeshStandardMaterial({ color:0x0b0f18 })
+    );
+    pupil.position.copy(iris.position).add(new Vector3(0,0,.05));
+    organism.add(pupil);
+
+    /* limb buds (capsule-ish made from cylinder + spheres) */
+    function limb(len=1.0, thick=0.09){
+      const mat = new MeshStandardMaterial({
+        color:0xf5d5ff, roughness:.7, metalness:.05,
+        emissive:0x442244, emissiveIntensity:.15
+      });
+      const g = new Group();
+      const cyl = new Mesh(new CylinderGeometry(thick, thick, len, 16), mat);
+      const s1 = new Mesh(new THREE.SphereGeometry(thick,16,16), mat);
+      const s2 = new Mesh(new THREE.SphereGeometry(thick,16,16), mat);
+      s1.position.y =  len/2; s2.position.y = -len/2;
+      g.add(cyl,s1,s2);
+      return g;
+    }
+    const armL = limb(1.0); armL.position.set(-0.8, 0.10, 0.2); armL.rotation.z= 1.2;
+    const armR = limb(1.0); armR.position.set( 0.8, 0.10, 0.2); armR.rotation.z=-1.2;
+    const legL = limb(1.2); legL.position.set(-0.5,-0.90, 0.2); legL.rotation.z= 1.6;
+    const legR = limb(1.2); legR.position.set( 0.5,-0.90, 0.2); legR.rotation.z=-1.6;
+    organism.add(armL,armR,legL,legR);
+
+    /* simple cord built from short cylinders along a bezier-like path */
+    function cord(segments=20){
+      const g = new Group();
+      const mat = new MeshStandardMaterial({
+        color:0xff77bb, emissive:0xff66cc, emissiveIntensity:.2, roughness:.7
+      });
+      let prev = new Vector3(0,0,0);
+      for(let i=0;i<segments;i++){
+        const t=i/(segments-1);
+        const x= -1.8*t;
+        const y= 0.2*Math.sin(t*Math.PI*2)*0.4 -0.1;
+        const z= 0.0;
+        const p=new Vector3(x,y,z);
+        if(i>0){
+          const segLen = p.clone().sub(prev).length();
+          const cyl = new Mesh(new CylinderGeometry(0.05,0.05, segLen, 10), mat);
+          cyl.position.copy(prev.clone().add(p).multiplyScalar(0.5));
+          cyl.lookAt(p);
+          cyl.rotateX(Math.PI/2);
+          g.add(cyl);
+        }
+        prev = p;
+      }
+      g.position.set(-0.1,-0.2,0.1);
+      return g;
+    }
+    const cordMesh = cord();
+    organism.add(cordMesh);
+
+    /* animation */
+    function animate(ms){
+      const t = ms/1000;
+
+      // breathing
+      const breathe = 1+0.07*Math.sin(t*1.7);
+      torso.scale.set(1.25*breathe, 1.0*breathe, 1.1*breathe);
+
+      // limb sway
+      armL.rotation.z = 1.2 + 0.25*Math.sin(t*1.3);
+      armR.rotation.z = -1.2 + 0.25*Math.cos(t*1.3);
+      legL.rotation.z = 1.6 + 0.18*Math.sin(t*1.1);
+      legR.rotation.z = -1.6 + 0.18*Math.cos(t*1.1);
+
+      // subtle float
+      organism.position.y = 0.05*Math.sin(t*0.8);
+
+      renderer.render(scene,camera);
+      requestAnimationFrame(animate);
+    }
+    requestAnimationFrame(animate);
+  })();
+  </script>
 </body>
 </html>
